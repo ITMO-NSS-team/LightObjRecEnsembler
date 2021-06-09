@@ -8,8 +8,8 @@ import numpy as np
 
 from PIL import Image
 
-from pytorch_objectdetecttrack.utils.parse_config import *
-from pytorch_objectdetecttrack.utils.utils import build_targets
+from utils.parse_config import *
+from utils.utils import build_targets
 from collections import defaultdict
 
 ##import matplotlib.pyplot as plt
