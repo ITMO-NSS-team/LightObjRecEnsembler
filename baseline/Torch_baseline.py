@@ -9,15 +9,19 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+from fast_rcnn.utils.config import opt
+from fast_rcnn.model.faster_rcnn_vgg16 import FasterRCNNVGG16
+from fast_rcnn.trainer import FasterRCNNTrainer
+from fast_rcnn.data.util import  read_image
+from fast_rcnn.utils.vis_tool import vis_bbox
+from fast_rcnn.utils import array_tool as at
 
 Tensor = torch.FloatTensor
-conf_thres = 0.8
-nms_thres = 0.4
-img_size = 416
 img_path = "images/blueangels.jpg"
 
 
-def create_model():
+
+def create_model(img_size):
     config_path = 'config/yolov3.cfg'
     weights_path = 'config/yolov3.weights'
     class_path = 'config/coco.names'
@@ -33,7 +37,11 @@ def create_model():
     return model, classes
 
 
-def detect_image(img,model):
+def detect_image(img,
+                 model,
+                 img_size,
+                 conf_thres,
+                 nms_thres):
     # scale and pad image
     ratio = min(img_size / img.size[0], img_size / img.size[1])
     imw = round(img.size[0] * ratio)
@@ -55,10 +63,21 @@ def detect_image(img,model):
                                                conf_thres, nms_thres)
     return detections[0]
 
-def get_predictions(model):
+
+def get_predictions(img_path,
+                    model,
+                    img_size,
+                    conf_thres,
+                    nms_thres
+                    ):
     prev_time = time.time()
     img = Image.open(img_path)
-    detections = detect_image(img,model)
+    detections = detect_image(img,
+                              model,
+                              img_size,
+                              conf_thres,
+                              nms_thres
+                              )
     inference_time = datetime.timedelta(seconds=time.time() - prev_time)
     print('Inference Time: %s' % (inference_time))
     return img, detections
@@ -66,7 +85,8 @@ def get_predictions(model):
 
 def plot_predictions(img,
                      detections,
-                     classes):
+                     classes,
+                     img_size):
     # Get bounding-box colors
     cmap = plt.get_cmap('tab20b')
     colors = [cmap(i) for i in np.linspace(0, 1, 20)]
@@ -103,10 +123,43 @@ def plot_predictions(img,
     plt.show()
 
 
+def YOLO_branch(img_path: str,
+                conf_thres: float = 0.8,
+                nms_thres: float = 0.4,
+                img_size: int = 416,
+                vis: bool = False):
+    model, classes = create_model(img_size)
+    img, detections = get_predictions(img_path, model, img_size, conf_thres, nms_thres)
+    if vis:
+        plot_predictions(img, detections, classes, img_size)
+    return img, detections
+
+
+def fast_RCNN_branch(img_path: str,
+                     conf_thres: float = 0.8,
+                     nms_thres: float = 0.4,
+                     img_size: int = 416,
+                     vis: bool = False):
+    img = read_image(img_path)
+    img = torch.from_numpy(img)[None]
+    faster_rcnn = FasterRCNNVGG16()
+    cuda_flag = torch.cuda.is_available()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    trainer = FasterRCNNTrainer(faster_rcnn).to(device)
+    trainer.load('./config/RCNN_weights.pth')
+    opt.caffe_pretrain = False  # this model was trained from torchvision-pretrained model
+    bboxes, labels, scores = trainer.faster_rcnn.predict(img, visualize=True)
+
+    if vis:
+        vis_bbox(at.tonumpy(img[0]),
+                 at.tonumpy(bboxes[0]),
+                 at.tonumpy(labels[0]).reshape(-1),
+                 at.tonumpy(scores[0]).reshape(-1))
+
+    return bboxes, labels, scores
+
 
 # load image and get detections
 if __name__ == '__main__':
-    model, classes = create_model()
-    img, detections = get_predictions(model)
-    plot_predictions(img, detections,classes)
-
+    bboxes, labels, scores = fast_RCNN_branch(img_path=img_path, vis=True)
+    img1, detections1 = YOLO_branch(img_path=img_path, vis=True)
