@@ -10,7 +10,7 @@ import pathlib
 import numpy as np
 import torch
 from typing import List
-from datasets import ObjectDetectionDataSet
+#from datasets import ObjectDetectionDataSet
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
 
 #import matplotlib.pyplot as plt
@@ -308,7 +308,7 @@ def enable_gui_qt():
     ipython.magic('gui qt')
 
 
-def stats_dataset(dataset: ObjectDetectionDataSet, rcnn_transform: GeneralizedRCNNTransform = False):
+def stats_dataset(dataset, rcnn_transform: GeneralizedRCNNTransform = False):
     """
     Iterates over the dataset and returns some stats.
     Can be useful to pick the right anchor box sizes.
