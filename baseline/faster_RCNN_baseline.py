@@ -1,14 +1,16 @@
 from itertools import chain
 from typing import Tuple, List
-from backbone_teamplates import get_resnet_backbone, get_resnet_fpn_backbone
+from baseline.backbone_teamplates import get_resnet_backbone, get_resnet_fpn_backbone, get_densenet_backbone, \
+    get_fpn_backbone, get_mobilenet_backbone
 
 import pytorch_lightning as pl
 import torch
 from torchvision.models.detection.faster_rcnn import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.ops import MultiScaleRoIAlign
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
-from utils.utils import from_dict_to_BoundingBox
+from baseline.utils.utils import from_dict_to_BoundingBox
 
 
 def get_anchor_generator(anchor_size: Tuple[tuple] = None, aspect_ratios: Tuple[tuple] = None):
@@ -70,7 +72,6 @@ def get_fasterRCNN_resnet(num_classes: int,
                           backbone_name: str,
                           anchor_size: List[float],
                           aspect_ratios: List[float],
-                          fpn: bool = True,
                           min_size: int = 512,
                           max_size: int = 1024,
                           **kwargs
@@ -78,10 +79,20 @@ def get_fasterRCNN_resnet(num_classes: int,
     """Returns the Faster-RCNN model with resnet backbone with and without fpn."""
 
     # Backbone
-    if fpn:
-        backbone = get_resnet_fpn_backbone(backbone_name=backbone_name)
-    else:
+    if 'fpn' in backbone_name:
+        model = get_fpn_backbone(backbone_name=backbone_name)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        # replace the pre-trained head with a new one
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        return model
+    elif 'resnet' in backbone_name:
         backbone = get_resnet_backbone(backbone_name=backbone_name)
+    elif 'densenet' in backbone_name:
+        backbone = get_densenet_backbone(backbone_name=backbone_name)
+    elif 'mobilenet' in backbone_name:
+        backbone = get_mobilenet_backbone(backbone_name=backbone_name)
+    else:
+        ValueError("Invalid model name, exiting...")
 
     # Anchors
     anchor_size = anchor_size
@@ -177,8 +188,8 @@ class FasterRCNN_lightning(pl.LightningModule):
         pred_boxes = [out['pred_boxes'] for out in outs]
         pred_boxes = list(chain(*pred_boxes))
 
-        from utils.metrics.pascal_voc_evaluator import get_pascalvoc_metrics
-        from utils.metrics.enumerators import MethodAveragePrecision
+        from torch_utils.utils import get_pascalvoc_metrics
+        from torch_utils.utils import MethodAveragePrecision
         metric = get_pascalvoc_metrics(gt_boxes=gt_boxes,
                                        det_boxes=pred_boxes,
                                        iou_threshold=self.iou_threshold,
@@ -212,8 +223,8 @@ class FasterRCNN_lightning(pl.LightningModule):
         pred_boxes = [out['pred_boxes'] for out in outs]
         pred_boxes = list(chain(*pred_boxes))
 
-        from utils.metrics.pascal_voc_evaluator import get_pascalvoc_metrics
-        from utils.metrics.enumerators import MethodAveragePrecision
+        from torch_utils.utils import get_pascalvoc_metrics
+        from torch_utils.utils import MethodAveragePrecision
         metric = get_pascalvoc_metrics(gt_boxes=gt_boxes,
                                        det_boxes=pred_boxes,
                                        iou_threshold=self.iou_threshold,

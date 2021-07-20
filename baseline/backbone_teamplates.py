@@ -1,6 +1,6 @@
 import torchvision.models as models
-from torchvision.models.detection import faster_rcnn, mask_rcnn, retinanet, keypoint_rcnn
 import torch
+import torchvision
 from torch import nn
 from torchvision.models import resnet
 from torchvision.models._utils import IntermediateLayerGetter
@@ -58,29 +58,41 @@ def get_densenet_backbone(backbone_name: str):
 
     return backbone
 
+def get_mobilenet_backbone(backbone_name: str):
+    if backbone_name == "mobilenet_v2":
+        backbone = models.mobilenet_v2(pretrained=True).features
+        out_channels = 1280
+    elif backbone_name == "mobilenet_v3_large":
+        backbone = models.mobilenet_v3_large(pretrained=True).features
+        out_channels = 960
+    elif backbone_name == "mobilenet_v3_small":
+        backbone = models.mobilenet_v3_small(pretrained=True).features
+        out_channels = 576
 
-def get_resnet_rcnn_backbone(backbone_name: str):
+    backbone.out_channels = out_channels
+    return backbone
+
+
+def get_fpn_backbone(backbone_name: str):
     """
     Returns a resnet backbone pretrained on ImageNet.
     Removes the average-pooling layer and the linear layer at the end.
     """
 
     if backbone_name == 'fasterrcnn_resnet50_fpn':
-        pretrained_model = faster_rcnn.fasterrcnn_resnet50_fpn(pretrained=True, progress=False)
-        out_channels = 512
+        # load a model pre-trained pre-trained on COCO
+        pretrained_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+
+    elif backbone_name == 'mobilenet_v3_large_fpn':
+        pretrained_model = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=True)
+
+    elif backbone_name == 'mobilenet_v3_large_320_fpn':
+        pretrained_model = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=True)
+
     elif backbone_name == 'retinanet_resnet50_fpn':
-        pretrained_model = retinanet.retinanet_resnet50_fpn(pretrained=True, progress=False)
-        out_channels = 512
-    elif backbone_name == 'keypointrcnn_resnet50_fpn':
-        pretrained_model = keypoint_rcnn.keypointrcnn_resnet50_fpn(pretrained=True, progress=False)
-        out_channels = 2048
-    elif backbone_name == 'maskrcnn_resnet50_fpn':
-        pretrained_model = mask_rcnn.maskrcnn_resnet50_fpn(pretrained=True, progress=False)
+        pretrained_model = torchvision.models.detection.retinanet_resnet50_fpn(pretrained=True)
 
-    backbone = torch.nn.Sequential(*list(pretrained_model.children())[:-2])
-    backbone.out_channels = out_channels
-
-    return backbone
+    return pretrained_model
 
 
 def get_resnet_fpn_backbone(backbone_name: str, pretrained: bool = True, trainable_layers: int = 5):
