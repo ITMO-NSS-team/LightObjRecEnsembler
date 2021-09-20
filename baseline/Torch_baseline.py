@@ -5,7 +5,7 @@ from utils import utils
 import time, datetime, random
 import numpy as np
 import torch
-from torchvision import datasets, transforms
+from torchvision import transforms
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -16,7 +16,7 @@ from fast_rcnn.trainer import FasterRCNNTrainer
 from fast_rcnn.data.util import read_image
 from fast_rcnn.utils.vis_tool import vis_bbox
 from fast_rcnn.utils import array_tool as at
-from utils.Ensemble import Rectangle
+from baseline_VHR.utils.ensemble import Rectangle
 
 Tensor = torch.FloatTensor
 img_path = "images/Intersection-Counts.jpg"

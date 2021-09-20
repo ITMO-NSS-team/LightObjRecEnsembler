@@ -1,23 +1,21 @@
+from copy import deepcopy
 import gc
 import itertools
-import os
 
 import pandas as pd
-import torchvision.transforms as transforms
 import numpy as np
 import torch
 import torchvision
-import VHR.torch_utils.transforms as T
-import VHR.torch_utils.utils as utils
-from VHR.torch_utils.engine import train_one_epoch, evaluate
-from VHR.visualization import plot_img_bbox
-from PIL import Image
-from baseline.faster_RCNN_baseline import FasterRCNN_lightning, get_fasterRCNN_resnet
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from VHR.data_loaders import train_test_split, VHRDataset
-from baseline.utils.Ensemble import Rectangle
-from copy import deepcopy
-import gc
+import torchvision.transforms as transforms
+
+import baseline_VHR.torch_utils.transforms as T
+from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
+import baseline_VHR.torch_utils.utils as utils
+from baseline_VHR.data_loaders import train_test_split, VHRDataset
+from baseline_VHR.visualization import plot_img_bbox
+from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
+from baseline_VHR.utils.ensemble import Rectangle
+
 
 def get_transform(train):
     transforms = []
@@ -27,9 +25,8 @@ def get_transform(train):
     return T.Compose(transforms)
 
 
-
 def apply_nms(orig_prediction, iou_thresh=0.3):
-    # torchvision returns the indices of the bboxes to keep
+    # torchvision returns the indices of the boxes to keep
     keep = torchvision.ops.nms(orig_prediction['boxes'], orig_prediction['scores'], iou_thresh)
 
     final_prediction = deepcopy(orig_prediction)
@@ -82,7 +79,6 @@ def train_model(model, device, dataset, dataset_test, num_epochs=10):
     torch.save(model.state_dict(), filepath)
 
 
-
 def rectangle_intersect(first_box: list,
                         second_box: list):
     a = Rectangle(*first_box)
@@ -106,7 +102,6 @@ def ensemble_OD_predictions(bboxes: list,
                             area_threshold: float = 0.75,
                             ensemble_type: str = 'Majority',
                             vis_flag: bool = True):
-
     if len(bboxes[0]) > len(bboxes[1]):
         bboxes.reverse()
         labels.reverse()
@@ -152,7 +147,6 @@ def ensemble_OD_predictions(bboxes: list,
             bboxes_merged.append(first_box)
             labels_merged.append(labels[0][index_1])
 
-
     compose_bbox = list(itertools.chain(bboxes[1], bboxes_merged)),
     compose_labels = list(itertools.chain(labels[1], labels_merged))
 
@@ -161,65 +155,62 @@ def ensemble_OD_predictions(bboxes: list,
 
 num_classes = 11
 params = {'BATCH_SIZE': 32,
-              'LR': 0.001,
-              'PRECISION': 32,
-              'CLASSES': num_classes,
-              'SEED': 42,
-              'PROJECT': 'Heads',
-              'EXPERIMENT': 'heads',
-              'MAXEPOCHS': 500,
-              'BACKBONE': 'fasterrcnn_resnet50_fpn',
-              'FPN': False,
-              'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
-              'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
-              'MIN_SIZE': 1024,
-              'MAX_SIZE': 1024,
-              'IMG_MEAN': [0.485, 0.456, 0.406],
-              'IMG_STD': [0.229, 0.224, 0.225],
-              'IOU_THRESHOLD': 0.5
-              }
+          'LR': 0.001,
+          'PRECISION': 32,
+          'CLASSES': num_classes,
+          'SEED': 42,
+          'PROJECT': 'Heads',
+          'EXPERIMENT': 'heads',
+          'MAXEPOCHS': 500,
+          'BACKBONE': 'fasterrcnn_resnet50_fpn',
+          'FPN': False,
+          'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
+          'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
+          'MIN_SIZE': 1024,
+          'MAX_SIZE': 1024,
+          'IMG_MEAN': [0.485, 0.456, 0.406],
+          'IMG_STD': [0.229, 0.224, 0.225],
+          'IOU_THRESHOLD': 0.5
+          }
 
 model = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
-                                  backbone_name=params['BACKBONE'],
-                                  anchor_size=params['ANCHOR_SIZE'],
-                                  aspect_ratios=params['ASPECT_RATIOS'],
-                                  fpn=params['FPN'],
-                                  min_size=params['MIN_SIZE'],
-                                  max_size=params['MAX_SIZE'])
-
+                              backbone_name=params['BACKBONE'],
+                              anchor_size=params['ANCHOR_SIZE'],
+                              aspect_ratios=params['ASPECT_RATIOS'],
+                              fpn=params['FPN'],
+                              min_size=params['MIN_SIZE'],
+                              max_size=params['MAX_SIZE'])
 
 params = {'BATCH_SIZE': 32,
-              'LR': 0.001,
-              'PRECISION': 32,
-              'CLASSES': num_classes,
-              'SEED': 42,
-              'PROJECT': 'Heads',
-              'EXPERIMENT': 'heads',
-              'MAXEPOCHS': 500,
-              'BACKBONE': 'resnet18',
-              'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
-              'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
-              'MIN_SIZE': 1024,
-              'MAX_SIZE': 1024,
-              'IMG_MEAN': [0.485, 0.456, 0.406],
-              'IMG_STD': [0.229, 0.224, 0.225],
-              'IOU_THRESHOLD': 0.5
-              }
+          'LR': 0.001,
+          'PRECISION': 32,
+          'CLASSES': num_classes,
+          'SEED': 42,
+          'PROJECT': 'Heads',
+          'EXPERIMENT': 'heads',
+          'MAXEPOCHS': 500,
+          'BACKBONE': 'resnet18',
+          'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
+          'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
+          'MIN_SIZE': 1024,
+          'MAX_SIZE': 1024,
+          'IMG_MEAN': [0.485, 0.456, 0.406],
+          'IMG_STD': [0.229, 0.224, 0.225],
+          'IOU_THRESHOLD': 0.5
+          }
 
 model_2 = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
-                                  backbone_name=params['BACKBONE'],
-                                  anchor_size=params['ANCHOR_SIZE'],
-                                  aspect_ratios=params['ASPECT_RATIOS'],
-                                  min_size=params['MIN_SIZE'],
-                                  max_size=params['MAX_SIZE'])
-
-
+                                backbone_name=params['BACKBONE'],
+                                anchor_size=params['ANCHOR_SIZE'],
+                                aspect_ratios=params['ASPECT_RATIOS'],
+                                min_size=params['MIN_SIZE'],
+                                max_size=params['MAX_SIZE'])
 
 train_mode = False
 dataset, dataset_test = train_test_split(VHRDataset)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-filepath = "./VHR_statedict.pth"
-filepath_2 = "./VHR_statedict_resnet18.pth"
+filepath = "../local/VHR_statedict_fasterrcnn_resnet50_fpn.pth"
+filepath_2 = "../local/VHR_statedict_resnet18.pth"
 
 if __name__ == '__main__':
     if train_mode:
@@ -230,7 +221,6 @@ if __name__ == '__main__':
 
     img, target = dataset_test[27]
     plot_img_bbox(img, target)
-
 
     model.eval()
     model_2.eval()
@@ -244,7 +234,6 @@ if __name__ == '__main__':
 
     print('MODEL OUTPUT')
 
-
     pred = deepcopy(prediction)
     pred['boxes'] = pred['boxes'].cpu().numpy()
     plot_img_bbox(img, pred)
@@ -252,7 +241,6 @@ if __name__ == '__main__':
     pred = deepcopy(prediction_2)
     pred['boxes'] = pred['boxes'].cpu().numpy()
     plot_img_bbox(img, pred)
-
 
     nms_prediction = apply_nms(prediction, iou_thresh=0.05)
     nms_prediction_2 = apply_nms(prediction_2, iou_thresh=0.05)
@@ -269,10 +257,10 @@ if __name__ == '__main__':
     print('NMS APPLIED MODEL OUTPUT')
 
     compose_bbox = ensemble_OD_predictions([nms_prediction_2['boxes'], nms_prediction['boxes']],
-                                               [nms_prediction_2['labels'], nms_prediction['labels']],
-                                               [nms_prediction_2['scores'], nms_prediction['boxes']],
-                                               image=img)
-    plot_img_bbox(img, {'boxes':compose_bbox})
+                                           [nms_prediction_2['labels'], nms_prediction['labels']],
+                                           [nms_prediction_2['scores'], nms_prediction['boxes']],
+                                           image=img)
+
+    plot_img_bbox(img, {'boxes': compose_bbox})
 
     gc.collect()
-

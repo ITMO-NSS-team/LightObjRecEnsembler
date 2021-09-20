@@ -4,11 +4,10 @@ import os
 import torch
 import torch.utils.data
 import torchvision
-
 from pycocotools import mask as coco_mask
 from pycocotools.coco import COCO
 
-from baseline.VHR.torch_utils import transforms as T
+from . import transforms as T
 
 
 class FilterAndRemapCocoCategories(object):

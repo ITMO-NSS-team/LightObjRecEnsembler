@@ -28,6 +28,8 @@ def get_resnet_backbone(backbone_name: str):
     elif backbone_name == 'resnet152':
         pretrained_model = models.resnet152(pretrained=True, progress=False)
         out_channels = 2048
+    else:
+        raise ValueError("No backbone model name.")
 
     backbone = torch.nn.Sequential(*list(pretrained_model.children())[:-2])
     backbone.out_channels = out_channels
@@ -52,11 +54,14 @@ def get_densenet_backbone(backbone_name: str):
     elif backbone_name == 'densenet201':
         pretrained_model = models.densenet201(pretrained=True, progress=False)
         out_channels = 1920
+    else:
+        raise ValueError("No backbone model name.")
 
     backbone = torch.nn.Sequential(*list(pretrained_model.children())[:-1])
     backbone.out_channels = out_channels
 
     return backbone
+
 
 def get_mobilenet_backbone(backbone_name: str):
     if backbone_name == "mobilenet_v2":
@@ -68,6 +73,8 @@ def get_mobilenet_backbone(backbone_name: str):
     elif backbone_name == "mobilenet_v3_small":
         backbone = models.mobilenet_v3_small(pretrained=True).features
         out_channels = 576
+    else:
+        raise ValueError("No backbone model name.")
 
     backbone.out_channels = out_channels
     return backbone
@@ -91,6 +98,8 @@ def get_fpn_backbone(backbone_name: str):
 
     elif backbone_name == 'retinanet_resnet50_fpn':
         pretrained_model = torchvision.models.detection.retinanet_resnet50_fpn(pretrained=True)
+    else:
+        raise ValueError("No backbone model name.")
 
     return pretrained_model
 
@@ -133,7 +142,7 @@ def resnet_fpn_backbone(backbone_name: str,
         norm_layer=norm_layer)
 
     # select layers that wont be frozen
-    assert trainable_layers <= 5 and trainable_layers >= 0
+    assert 5 >= trainable_layers >= 0
     layers_to_train = ['layer4', 'layer3', 'layer2', 'layer1', 'conv1'][:trainable_layers]
     # freeze layers only if pretrained backbone is used
     for name, parameter in backbone.named_parameters():

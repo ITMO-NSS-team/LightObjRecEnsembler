@@ -1,10 +1,10 @@
-import torch
-import torchvision
-
-from torch import nn, Tensor
-from torchvision.transforms import functional as F
-from torchvision.transforms import transforms as T
 from typing import List, Tuple, Dict, Optional
+
+import torch
+from torch import nn, Tensor
+import torchvision
+from torchvision.transforms import functional as F
+from torchvision.transforms import ColorJitter, RandomHorizontalFlip as RHF
 
 
 def _flip_coco_person_keypoints(kps, width):
@@ -27,7 +27,7 @@ class Compose(object):
         return image, target
 
 
-class RandomHorizontalFlip(T.RandomHorizontalFlip):
+class RandomHorizontalFlip(RHF):
     def forward(self, image: Tensor,
                 target: Optional[Dict[str, Tensor]] = None) -> Tuple[Tensor, Optional[Dict[str, Tensor]]]:
         if torch.rand(1) < self.p:
@@ -191,10 +191,10 @@ class RandomPhotometricDistort(nn.Module):
     def __init__(self, contrast: Tuple[float] = (0.5, 1.5), saturation: Tuple[float] = (0.5, 1.5),
                  hue: Tuple[float] = (-0.05, 0.05), brightness: Tuple[float] = (0.875, 1.125), p: float = 0.5):
         super().__init__()
-        self._brightness = T.ColorJitter(brightness=brightness)
-        self._contrast = T.ColorJitter(contrast=contrast)
-        self._hue = T.ColorJitter(hue=hue)
-        self._saturation = T.ColorJitter(saturation=saturation)
+        self._brightness = ColorJitter(brightness=brightness)
+        self._contrast = ColorJitter(contrast=contrast)
+        self._hue = ColorJitter(hue=hue)
+        self._saturation = ColorJitter(saturation=saturation)
         self.p = p
 
     def forward(self, image: Tensor,
