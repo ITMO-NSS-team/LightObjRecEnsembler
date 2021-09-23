@@ -1,6 +1,7 @@
 from copy import deepcopy
 import gc
 import itertools
+import os
 
 import pandas as pd
 import numpy as np
@@ -8,6 +9,9 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from bounding_box import BoundingBox
+from evaluators_utils.enumerators import BBType
+from baseline_VHR.evaluators.coco_evaluator import get_coco_summary, get_coco_metrics
 import baseline_VHR.torch_utils.transforms as T
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 import baseline_VHR.torch_utils.utils as utils
@@ -109,6 +113,7 @@ def ensemble_OD_predictions(bboxes: list,
 
     bboxes_merged = []
     labels_merged = []
+    scores_merged = []
 
     mergedDf = pd.DataFrame({'Weak NN frame number': [],
                              'Weak NN frame class': [],
@@ -116,14 +121,7 @@ def ensemble_OD_predictions(bboxes: list,
                              'Major NN frame class': [],
                              'Intersection area/Weak NN area': [],
                              'Intersection area/Major NN area': [],
-                             'New frame coordinates': []},
-                            columns=['Weak NN frame number',
-                                     'Weak NN frame class',
-                                     'Major NN frame number',
-                                     'Major NN frame class',
-                                     'Intersection area/Weak NN area',
-                                     'Intersection area/Major NN area',
-                                     'New frame coordinates'])
+                             'New frame coordinates': []})
 
     for index_1, first_box in enumerate(bboxes[0]):
         for index_2, second_box in enumerate(bboxes[1]):
@@ -146,11 +144,39 @@ def ensemble_OD_predictions(bboxes: list,
         if check_flag:
             bboxes_merged.append(first_box)
             labels_merged.append(labels[0][index_1])
+            scores_merged.append(scores[0][index_1])
 
     compose_bbox = list(itertools.chain(bboxes[1], bboxes_merged)),
     compose_labels = list(itertools.chain(labels[1], labels_merged))
+    compose_scores = list(itertools.chain(scores[1], scores_merged))
 
-    return compose_bbox[0]
+    return {'boxes': np.array(compose_bbox[0]), 'labels': np.array(compose_labels), 'scores': np.array(compose_scores)}
+
+
+def calculate_coco_metrics(target, prediction):
+    gt_bbs = []
+    detected_bbs = []
+
+    image_name = str(target['image_id'].tolist()[0] + 1)
+
+    for i in range(len(target['labels'].tolist())):
+        class_id = target['labels'].tolist()[i]
+        box = target['boxes'].tolist()[i]
+        x, y, width, height = box[0], box[1], box[2] - box[0], box[3] - box[1]
+        bounding_box = BoundingBox(image_name=image_name, class_id=class_id,
+                                   coordinates=(x, y, width, height), bb_type=BBType.GROUND_TRUTH)
+        gt_bbs.append(bounding_box)
+
+    for i in range(len(prediction['labels'].tolist())):
+        class_id = prediction['labels'].tolist()[i]
+        box = prediction['boxes'].tolist()[i]
+        x, y, width, height = box[0], box[1], box[2] - box[0], box[3] - box[1]
+        bounding_box = BoundingBox(image_name=image_name, class_id=class_id, coordinates=(x, y, width, height),
+                                   bb_type=BBType.DETECTED, confidence=prediction['scores'].tolist()[i])
+        detected_bbs.append(bounding_box)
+
+    coco_summary = get_coco_summary(gt_bbs, detected_bbs)
+    return coco_summary
 
 
 num_classes = 11
@@ -211,6 +237,8 @@ dataset, dataset_test = train_test_split(VHRDataset)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 filepath = "../local/VHR_statedict_fasterrcnn_resnet50_fpn.pth"
 filepath_2 = "../local/VHR_statedict_resnet18.pth"
+path = os.path.dirname(os.path.abspath(__file__))
+path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'predictions')
 
 if __name__ == '__main__':
     if train_mode:
@@ -219,48 +247,118 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(filepath))
         model_2.load_state_dict(torch.load(filepath_2))
 
-    img, target = dataset_test[27]
-    plot_img_bbox(img, target)
-
     model.eval()
     model_2.eval()
-    with torch.no_grad():
-        prediction = model([img.to(device)])[0]
-        prediction_2 = model_2([img.to(device)])[0]
 
-    print('predicted model #boxes: ', len(prediction['labels']))
-    print('predicted model_2 #boxes: ', len(prediction_2['labels']))
-    print('real #boxes: ', len(target['labels']))
+    save = True
+    show = False
 
-    print('MODEL OUTPUT')
+    columns = [
+        "AP",
+        "AP50",
+        "AP75",
+        "APsmall",
+        "APmedium",
+        "APlarge",
+        "AR1",
+        "AR10",
+        "AR100",
+        "ARsmall",
+        "ARmedium",
+        "ARlarge"
+    ]
+    image_ids = []
+    results_resnet50 = pd.DataFrame(columns=columns)
+    results_resnet18 = pd.DataFrame(columns=columns)
+    results_resnet50_nms = pd.DataFrame(columns=columns)
+    results_resnet18_nms = pd.DataFrame(columns=columns)
+    results_ensemble_nms = pd.DataFrame(columns=columns)
 
-    pred = deepcopy(prediction)
-    pred['boxes'] = pred['boxes'].cpu().numpy()
-    plot_img_bbox(img, pred)
+    for i in range(len(dataset_test)):
+        result_current_image = pd.DataFrame()
+        img, target = dataset_test[i]
+        image_id = str(target['image_id'].tolist()[0] + 1)
+        image_ids.append(image_id)
+        plot_img_bbox(img, target, title='IMAGE', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
 
-    pred = deepcopy(prediction_2)
-    pred['boxes'] = pred['boxes'].cpu().numpy()
-    plot_img_bbox(img, pred)
+        with torch.no_grad():
+            prediction = model([img.to(device)])[0]
+            prediction_2 = model_2([img.to(device)])[0]
 
-    nms_prediction = apply_nms(prediction, iou_thresh=0.05)
-    nms_prediction_2 = apply_nms(prediction_2, iou_thresh=0.05)
+        ### VISUALISE MODELS PREDICTIONS
+        pred = deepcopy(prediction)
+        pred['boxes'] = pred['boxes'].cpu().numpy()
+        metrics_50 = calculate_coco_metrics(target, pred)
+        plot_img_bbox(img, pred, title='RESNET50', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
 
-    print('NMS APPLIED MODEL OUTPUT')
-    nms_prediction['boxes'] = nms_prediction['boxes'].cpu().numpy()
-    nms_prediction_2['boxes'] = nms_prediction_2['boxes'].cpu().numpy()
-    nms_prediction['labels'] = nms_prediction['labels'].cpu().numpy()
-    nms_prediction_2['labels'] = nms_prediction_2['labels'].cpu().numpy()
-    nms_prediction['scores'] = nms_prediction['scores'].cpu().numpy()
-    nms_prediction_2['scores'] = nms_prediction_2['scores'].cpu().numpy()
-    plot_img_bbox(img, nms_prediction)
-    plot_img_bbox(img, nms_prediction_2)
-    print('NMS APPLIED MODEL OUTPUT')
+        pred = deepcopy(prediction_2)
+        pred['boxes'] = pred['boxes'].cpu().numpy()
+        metrics_18 = calculate_coco_metrics(target, pred)
+        plot_img_bbox(img, pred, title='RESNET18', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
 
-    compose_bbox = ensemble_OD_predictions([nms_prediction_2['boxes'], nms_prediction['boxes']],
-                                           [nms_prediction_2['labels'], nms_prediction['labels']],
-                                           [nms_prediction_2['scores'], nms_prediction['boxes']],
-                                           image=img)
+        ### VISUALISE MODELS PREDICTIONS AFTER IOU_THERESHOLD
+        nms_prediction = apply_nms(prediction, iou_thresh=0.01)
+        nms_prediction_2 = apply_nms(prediction_2, iou_thresh=0.01)
 
-    plot_img_bbox(img, {'boxes': compose_bbox})
+        nms_prediction['boxes'] = nms_prediction['boxes'].cpu().numpy()
+        nms_prediction_2['boxes'] = nms_prediction_2['boxes'].cpu().numpy()
+        nms_prediction['labels'] = nms_prediction['labels'].cpu().numpy()
+        nms_prediction_2['labels'] = nms_prediction_2['labels'].cpu().numpy()
+        nms_prediction['scores'] = nms_prediction['scores'].cpu().numpy()
+        nms_prediction_2['scores'] = nms_prediction_2['scores'].cpu().numpy()
 
+        plot_img_bbox(img, nms_prediction, title='RESNET50_NMS', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
+        metrics_50_nms = calculate_coco_metrics(target, nms_prediction)
+        # print("RESNET50_NMS:")
+        # print(metrics_50_nms)
+
+        plot_img_bbox(img, nms_prediction_2, title='RESNET18_NMS', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
+        metrics_18_nms = calculate_coco_metrics(target, nms_prediction_2)
+        # print("RESNET18_NMS:")
+        # print(metrics_18_nms)
+
+        ### VISUALISE MODELS PREDICTIONS AFTER ENSEMBLING
+        compose_bbox = ensemble_OD_predictions([nms_prediction_2['boxes'], nms_prediction['boxes']],
+                                               [nms_prediction_2['labels'], nms_prediction['labels']],
+                                               [nms_prediction_2['scores'], nms_prediction['scores']],
+                                               image=img)
+        plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=save,
+                      image_id=image_id, show=show, path=path_prediction)
+        metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
+        # print("ENSEMBLE:")
+        # print(metrics_ensemble_nms)
+
+        results_resnet50 = results_resnet50.append(metrics_50, ignore_index=True)
+        results_resnet18 = results_resnet18.append(metrics_18, ignore_index=True)
+        results_resnet18_nms = results_resnet18_nms.append(metrics_18_nms, ignore_index=True)
+        results_resnet50_nms = results_resnet50_nms.append(metrics_50_nms, ignore_index=True)
+        results_ensemble_nms = results_ensemble_nms.append(metrics_ensemble_nms, ignore_index=True)
+
+        ### SAVE METRICS FOR CURRENT IMAGE
+        result_current_image['resnet50'] = list(metrics_50.values())
+        result_current_image['resnet18'] = list(metrics_18.values())
+        result_current_image['resnet18_nms'] = list(metrics_18_nms.values())
+        result_current_image['resnet50_nms'] = list(metrics_50_nms.values())
+        result_current_image['ensemble'] = list(metrics_ensemble_nms.values())
+        result_current_image.index = columns
+        result_current_image.to_csv(os.path.join(path_prediction, image_id, f'{image_id}.csv'))
+
+        # TODO apply_nms after ensemble
+
+    results_resnet50['image_id'] = image_ids
+    results_resnet18['image_id'] = image_ids
+    results_resnet18_nms['image_id'] = image_ids
+    results_resnet50_nms['image_id'] = image_ids
+    results_ensemble_nms['image_id'] = image_ids
+
+    results_resnet50.to_csv(os.path.join(path_prediction, 'results_resnet50.csv'))
+    results_resnet18_nms.to_csv(os.path.join(path_prediction, 'results_resnet18_nms.csv'))
+    results_resnet18.to_csv(os.path.join(path_prediction, 'results_resnet18.csv'))
+    results_resnet50_nms.to_csv(os.path.join(path_prediction, 'results_resnet50_nms.csv'))
+    results_ensemble_nms.to_csv(os.path.join(path_prediction, 'results_ensemble_nms.csv'))
     gc.collect()
