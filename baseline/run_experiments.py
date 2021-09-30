@@ -1,4 +1,4 @@
-from faster_RCNN_baseline import FasterRCNN_lightning, get_fasterRCNN_resnet
+from baseline_VHR.faster_RCNN_baseline import FasterRCNN_lightning, get_fasterRCNN_resnet
 
 params = {'BATCH_SIZE': 2,
           'LR': 0.001,
