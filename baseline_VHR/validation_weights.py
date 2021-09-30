@@ -10,6 +10,7 @@ from baseline_VHR.VHR_experiment import apply_nms, calculate_coco_metrics
 def scaling_weights(weights: List) -> List:
     """Scaling weight to scale (0, 1)."""
     res_weights = []
+    # Weights for metrics. AP - the first one primary challenge metric.
     metrics_weight = [1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
 
     for w in weights:
