@@ -4,8 +4,7 @@ import os
 import xml.etree.ElementTree as ET
 
 import pandas as pd
-import general_utils as general_utils
-import validations as validations
+from baseline.eval_utils import validations as validations, general_utils as general_utils
 from baseline_VHR.bounding_box import BoundingBox
 from enumerators import BBFormat, BBType, CoordinatesType
 

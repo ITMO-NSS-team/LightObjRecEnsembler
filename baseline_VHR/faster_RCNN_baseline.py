@@ -187,8 +187,8 @@ class FasterRCNN_lightning(pl.LightningModule):
         pred_boxes = [out['pred_boxes'] for out in outs]
         pred_boxes = list(chain(*pred_boxes))
 
-        from baseline_VHR.torch_utils.utils import get_pascalzvoc_metrics
-        from baseline_VHR.torch_utils.utils import MethodAveragePrecision
+        from baseline_VHR.evaluators.pascal_voc_evaluator import get_pascalvoc_metrics
+        from baseline_VHR.evaluators.utils.enumerators import MethodAveragePrecision
         metric = get_pascalvoc_metrics(gt_boxes=gt_boxes,
                                        det_boxes=pred_boxes,
                                        iou_threshold=self.iou_threshold,
@@ -222,8 +222,8 @@ class FasterRCNN_lightning(pl.LightningModule):
         pred_boxes = [out['pred_boxes'] for out in outs]
         pred_boxes = list(chain(*pred_boxes))
 
-        from baseline_VHR.torch_utils.utils import get_pascalvoc_metrics
-        from baseline_VHR.torch_utils.utils import MethodAveragePrecision
+        from baseline_VHR.evaluators.pascal_voc_evaluator import get_pascalvoc_metrics
+        from baseline_VHR.evaluators.utils.enumerators import MethodAveragePrecision
         metric = get_pascalvoc_metrics(gt_boxes=gt_boxes,
                                        det_boxes=pred_boxes,
                                        iou_threshold=self.iou_threshold,

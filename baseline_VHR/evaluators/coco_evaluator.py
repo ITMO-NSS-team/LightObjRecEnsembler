@@ -20,9 +20,9 @@
 """
 
 from collections import defaultdict
-
 import numpy as np
-from baseline_VHR.bounding_box import BBFormat
+
+from baseline_VHR.evaluators.utils.enumerators import BBFormat
 
 
 def get_coco_summary(groundtruth_bbs, detected_bbs):

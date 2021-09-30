@@ -3,10 +3,8 @@ import os
 import xml.etree.ElementTree as ET
 
 import pandas as pd
-from enumerators import CoordinatesType
-from general_utils import get_files_recursively
 
-from .enumerators import BBFormat, BBType, FileFormat
+from baseline_VHR.evaluators.utils.enumerators import CoordinatesType, BBFormat, BBType, FileFormat
 
 
 def validate_formats(arg_format, arg_name, errors):

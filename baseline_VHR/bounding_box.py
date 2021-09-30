@@ -1,8 +1,7 @@
 from math import isclose
 
-from evaluators_utils.general_utils import convert_to_absolute_values, convert_to_relative_values
-
-from evaluators_utils.enumerators import BBFormat, BBType, CoordinatesType
+from baseline_VHR.evaluators.utils.general_utils import convert_to_absolute_values, convert_to_relative_values
+from baseline_VHR.evaluators.utils.enumerators import BBFormat, BBType, CoordinatesType
 
 
 class BoundingBox:

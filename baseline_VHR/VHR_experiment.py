@@ -10,8 +10,8 @@ import torchvision
 import torchvision.transforms as transforms
 
 from bounding_box import BoundingBox
-from evaluators_utils.enumerators import BBType
-from baseline_VHR.evaluators.coco_evaluator import get_coco_summary, get_coco_metrics
+from baseline_VHR.evaluators.utils.enumerators import BBType
+from baseline_VHR.evaluators.coco_evaluator import get_coco_summary
 import baseline_VHR.torch_utils.transforms as T
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 import baseline_VHR.torch_utils.utils as utils

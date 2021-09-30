@@ -1,6 +1,6 @@
 # import fnmatch
-# import os
-#
+import os
+
 # import cv2
 # import matplotlib.pyplot as plt
 # import numpy as np
@@ -120,23 +120,23 @@ def convert_to_absolute_values(size, box):
 #
 # def remove_file_extension(filename):
 #     return os.path.join(os.path.dirname(filename), os.path.splitext(filename)[0])
-#
-#
-# def get_files_dir(directory, extensions=['*']):
-#     ret = []
-#     for extension in extensions:
-#         if extension == '*':
-#             ret += [f for f in os.listdir(directory)]
-#             continue
-#         elif extension is None:
-#             # accepts all extensions
-#             extension = ''
-#         elif '.' not in extension:
-#             extension = f'.{extension}'
-#         ret += [f for f in os.listdir(directory) if f.lower().endswith(extension.lower())]
-#     return ret
-#
-#
+
+
+def get_files_dir(directory, extensions=['*']):
+    ret = []
+    for extension in extensions:
+        if extension == '*':
+            ret += [f for f in os.listdir(directory)]
+            continue
+        elif extension is None:
+            # accepts all extensions
+            extension = ''
+        elif '.' not in extension:
+            extension = f'.{extension}'
+        ret += [f for f in os.listdir(directory) if f.lower().endswith(extension.lower())]
+    return ret
+
+
 # def remove_file_extension(filename):
 #     return os.path.join(os.path.dirname(filename), os.path.splitext(filename)[0])
 #

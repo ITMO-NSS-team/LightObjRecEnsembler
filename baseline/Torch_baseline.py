@@ -1,7 +1,7 @@
 import itertools
 import pandas as pd
 from models import Darknet
-from baseline_VHR.evaluators_utils import utils
+from baseline_VHR.evaluators.utils import utils
 import time, datetime, random
 import numpy as np
 import torch

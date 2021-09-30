@@ -2,9 +2,9 @@ from typing import Union
 
 import numpy as np
 from baseline_VHR.evaluators.pascal_voc_evaluator import calculate_ap_11_point_interp, calculate_ap_every_point
-from baseline_VHR.tube import Tube
-from baseline_VHR.evaluators_utils.enumerators import MethodAveragePrecision
-from baseline_VHR.evaluators_utils.read_files import File
+from baseline.tube import Tube
+from baseline_VHR.evaluators.utils.enumerators import MethodAveragePrecision
+from baseline_VHR.evaluators.utils.read_files import File
 
 
 class TubeEvaluator():
@@ -19,7 +19,7 @@ class TubeEvaluator():
         Args:
             anno_filepath (str): annotation filepath
             preds_filepath (str): prediction filepath in json extension
-            method (MethodAveragePrecision, optional): Recall interpolation method (see src.evaluators_utils.enumerators). Defaults to MethodAveragePrecision.EVERY_POINT_INTERPOLATION.
+            method (MethodAveragePrecision, optional): Recall interpolation method (see src.utils.enumerators). Defaults to MethodAveragePrecision.EVERY_POINT_INTERPOLATION.
         """
 
         if not anno_filepath.endswith('.json'):

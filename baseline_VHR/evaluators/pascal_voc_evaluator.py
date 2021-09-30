@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from baseline_VHR.bounding_box import BoundingBox
-from baseline_VHR.evaluators_utils.enumerators import MethodAveragePrecision
+from baseline_VHR.evaluators.utils.enumerators import MethodAveragePrecision
 
 
 def calculate_ap_every_point(rec, prec):

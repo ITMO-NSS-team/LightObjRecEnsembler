@@ -34,10 +34,10 @@ class RegionProposalNetwork(nn.Module):
             initialize weight.
             May also be a callable that takes an array and edits its values.
         proposal_creator_params (dict): Key valued paramters for
-            :class:`model.evaluators_utils.creator_tools.ProposalCreator`.
+            :class:`model.utils.creator_tools.ProposalCreator`.
 
     .. seealso::
-        :class:`~model.evaluators_utils.creator_tools.ProposalCreator`
+        :class:`~model.utils.creator_tools.ProposalCreator`
 
     """
 

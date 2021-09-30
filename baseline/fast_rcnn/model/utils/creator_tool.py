@@ -52,7 +52,7 @@ class ProposalTargetCreator(object):
         sampled as foregrounds.
 
         Offsets and scales of bounding boxes are calculated using
-        :func:`model.evaluators_utils.bbox_tools.bbox2loc`.
+        :func:`model.utils.bbox_tools.bbox2loc`.
         Also, types of input arrays and output arrays are same.
 
         Here are notations.
@@ -140,7 +140,7 @@ class AnchorTargetCreator(object):
 
     Offsets and scales to match anchors to the ground truth are
     calculated using the encoding scheme of
-    :func:`model.evaluators_utils.bbox_tools.bbox2loc`.
+    :func:`model.utils.bbox_tools.bbox2loc`.
 
     .. [#] Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun. \
     Faster R-CNN: Towards Real-Time Object Detection with \

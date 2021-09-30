@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 
-from baseline_VHR.evaluators_utils import build_targets
+from baseline_VHR.evaluators.utils import build_targets
 from collections import defaultdict
 
 ##import matplotlib.pyplot as plt

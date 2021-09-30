@@ -5,7 +5,7 @@ import numpy as np
 from baseline.fast_rcnn.utils import array_tool as at
 from baseline.fast_rcnn.model.utils.bbox_tools import loc2bbox
 from torchvision.ops import nms
-# from model.evaluators_utils.nms import non_maximum_suppression
+# from model.utils.nms import non_maximum_suppression
 
 from torch import nn
 from baseline.fast_rcnn.data.dataset import preprocess

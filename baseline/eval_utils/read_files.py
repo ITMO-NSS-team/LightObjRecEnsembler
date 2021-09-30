@@ -1,5 +1,4 @@
 import json
-import os
 
 
 class File(object):
@@ -19,12 +18,3 @@ class File(object):
             data = json.load(f)
 
         return data
-
-
-if __name__ == "__main__":
-
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    example_file = os.path.join(this_dir, 'example.json')
-
-    annot_file = File(example_file)
-    data = annot_file.read()
