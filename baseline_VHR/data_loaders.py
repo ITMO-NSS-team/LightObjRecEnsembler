@@ -5,7 +5,7 @@ from PIL import Image
 import torch_utils.transforms as T
 
 
-def train_test_split(dataset_class):
+def train_test_split(dataset_class,validation_flag:bool = False):
     dataset = dataset_class('./NWPU VHR-10 dataset', get_transform(train=False))
     dataset_test = dataset_class('./NWPU VHR-10 dataset', get_transform(train=False))
     # split the dataset in train and test set
@@ -17,7 +17,12 @@ def train_test_split(dataset_class):
     tsize = int(len(dataset) * test_split)
     dataset = torch.utils.data.Subset(dataset, indices[:-tsize])
     dataset_test = torch.utils.data.Subset(dataset_test, indices[-tsize:])
-    return dataset, dataset_test
+    if validation_flag:
+        dataset_validation = torch.utils.data.Subset(dataset_test, indices[-tsize:])
+    else:
+        dataset_validation = None
+
+    return dataset, dataset_test, dataset_validation
 
 
 def get_transform(train):
