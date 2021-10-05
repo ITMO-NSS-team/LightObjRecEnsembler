@@ -264,13 +264,13 @@ def _group_detections(dt, gt):
 
 def _get_area(a):
     """ COCO does not consider the outer edge as included in the bbox """
-    x, y, x2, y2 = a.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
+    x, y, x2, y2 = a.get_absolute_bounding_box(False)
     return (x2 - x) * (y2 - y)
 
 
 def _jaccard(a, b):
-    xa, ya, x2a, y2a = a.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
-    xb, yb, x2b, y2b = b.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
+    xa, ya, x2a, y2a = a.get_absolute_bounding_box(False)
+    xb, yb, x2b, y2b = b.get_absolute_bounding_box(False)
 
     # innermost left x
     xi = max(xa, xb)

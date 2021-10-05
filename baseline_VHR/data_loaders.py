@@ -5,20 +5,23 @@ from PIL import Image
 import torch_utils.transforms as T
 
 
-def train_test_split(dataset_class,validation_flag:bool = False):
+def train_test_split(dataset_class, validation_flag: bool = False):
     dataset = dataset_class('./NWPU VHR-10 dataset', get_transform(train=False))
     dataset_test = dataset_class('./NWPU VHR-10 dataset', get_transform(train=False))
+    dataset_validation = dataset_class('./NWPU VHR-10 dataset', get_transform(train=False))
     # split the dataset in train and test set
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
 
     # train test split
     test_split = 0.2
+    valida_split = 0.2
     tsize = int(len(dataset) * test_split)
+    vsize = int(len(dataset) * test_split * valida_split)
     dataset = torch.utils.data.Subset(dataset, indices[:-tsize])
-    dataset_test = torch.utils.data.Subset(dataset_test, indices[-tsize:])
+    dataset_test = torch.utils.data.Subset(dataset_test, indices[-tsize:-vsize])
     if validation_flag:
-        dataset_validation = torch.utils.data.Subset(dataset_test, indices[-tsize:])
+        dataset_validation = torch.utils.data.Subset(dataset_validation, indices[-vsize:])
     else:
         dataset_validation = None
 

@@ -128,7 +128,7 @@ class BoundingBox:
         self._x2 = float(self._x2)
         self._y2 = float(self._y2)
 
-    def get_absolute_bounding_box(self, format=BBFormat.XYWH):
+    def get_absolute_bounding_box(self, format=True):
         """ Get bounding box in its absolute format.
 
         Parameters
@@ -145,9 +145,9 @@ class BoundingBox:
             If format is BBFormat.XYX2Y2, the coordinates are (upper-left-X, upper-left-Y,
             bottom-right-X, bottom-right-Y).
         """
-        if format == BBFormat.XYWH:
+        if format:
             return (self._x, self._y, self._w, self._h)
-        elif format == BBFormat.XYX2Y2:
+        else:
             return (self._x, self._y, self._x2, self._y2)
 
     def get_relative_bounding_box(self, img_size=None):
@@ -263,8 +263,8 @@ class BoundingBox:
         return self._bb_type
 
     def __str__(self):
-        abs_bb_xywh = self.get_absolute_bounding_box(format=BBFormat.XYWH)
-        abs_bb_xyx2y2 = self.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
+        abs_bb_xywh = self.get_absolute_bounding_box(True)
+        abs_bb_xyx2y2 = self.get_absolute_bounding_box(False)
         area = self.get_area()
         return f'image name: {self._image_name}\nclass: {self._class_id}\nbb (XYWH): {abs_bb_xywh}\nbb (X1Y1X2Y2): {abs_bb_xyx2y2}\narea: {area}\nbb_type: {self._bb_type}'
 
@@ -291,10 +291,10 @@ class BoundingBox:
         bool
             True if both bounding boxes have the same coordinates, otherwise False.
         """
-        det1BB = det1.getAbsoluteBoundingBox()
-        det1img_size = det1.getImageSize()
-        det2BB = det2.getAbsoluteBoundingBox()
-        det2img_size = det2.getImageSize()
+        det1BB = det1.get_absolute_bounding_box()
+        det1img_size = det1.get_image_size()
+        det2BB = det2.get_absolute_bounding_box()
+        det2img_size = det2.get_image_size()
 
         if det1.get_class_id() == det2.get_class_id() and \
            det1.get_confidence() == det2.get_confidence() and \
@@ -321,25 +321,20 @@ class BoundingBox:
         BoundingBox
             Cloned BoundingBox object.
         """
-        absBB = bounding_box.get_absolute_bounding_box(format=BBFormat.XYWH)
-        # return (self._x,self._y,self._x2,self._y2)
+        absBB = bounding_box.get_absolute_bounding_box(True)
         new_bounding_box = BoundingBox(bounding_box.get_image_name(),
                                        bounding_box.get_class_id(),
-                                       absBB[0],
-                                       absBB[1],
-                                       absBB[2],
-                                       absBB[3],
-                                       type_coordinates=bounding_box.getCoordinatesType(),
-                                       img_size=bounding_box.getImageSize(),
-                                       bb_type=bounding_box.getbb_type(),
-                                       confidence=bounding_box.getConfidence(),
+                                       coordinates=(absBB[0], absBB[1], absBB[2], absBB[3]),
+                                       type_coordinates=bounding_box.get_coordinates_type(),
+                                       bb_type=bounding_box.get_bb_type(),
+                                       confidence=bounding_box.get_confidence(),
                                        format=BBFormat.XYWH)
         return new_bounding_box
 
     @staticmethod
     def iou(boxA, boxB):
-        coords_A = boxA.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
-        coords_B = boxB.get_absolute_bounding_box(format=BBFormat.XYX2Y2)
+        coords_A = boxA.get_absolute_bounding_box(False)
+        coords_B = boxB.get_absolute_bounding_box(False)
         # if boxes do not intersect
         if BoundingBox.have_intersection(coords_A, coords_B) is False:
             return 0
@@ -355,9 +350,9 @@ class BoundingBox:
     @staticmethod
     def have_intersection(boxA, boxB):
         if isinstance(boxA, BoundingBox):
-            boxA = boxA.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxA = boxA.get_absolute_bounding_box(False)
         if isinstance(boxB, BoundingBox):
-            boxB = boxB.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxB = boxB.get_absolute_bounding_box(False)
         if boxA[0] > boxB[2]:
             return False  # boxA is right of boxB
         if boxB[0] > boxA[2]:
@@ -371,9 +366,9 @@ class BoundingBox:
     @staticmethod
     def get_intersection_area(boxA, boxB):
         if isinstance(boxA, BoundingBox):
-            boxA = boxA.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxA = boxA.get_absolute_bounding_box(False)
         if isinstance(boxB, BoundingBox):
-            boxB = boxB.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxB = boxB.get_absolute_bounding_box(False)
         xA = max(boxA[0], boxB[0])
         yA = max(boxA[1], boxB[1])
         xB = min(boxA[2], boxB[2])
@@ -383,23 +378,25 @@ class BoundingBox:
 
     @staticmethod
     def get_intersection(boxA, boxB):
+        image_name = boxA.get_image_name()
+        class_id = boxA.get_class_id()
+        confidence = max(boxA.get_confidence(), boxB.get_confidence())
+
         if isinstance(boxA, BoundingBox):
-            boxA = boxA.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxA = boxA.get_absolute_bounding_box(False)
         if isinstance(boxB, BoundingBox):
-            boxB = boxB.get_absolute_bounding_box(BBFormat.XYX2Y2)
+            boxB = boxB.get_absolute_bounding_box(False)
 
         xA = max(boxA[0], boxB[0])
         yA = max(boxA[1], boxB[1])
         xB = min(boxA[2], boxB[2])
         yB = min(boxA[3], boxB[3])
 
-        image_name = boxA.get_image_name()
-        class_id = boxA.get_class_id()
         x = xA
         y = yA
         width = xB - xA
         height = yB - yA
-        bounding_box = BoundingBox(image_name=image_name, class_id=class_id,
+        bounding_box = BoundingBox(image_name=image_name, class_id=class_id, confidence=confidence,
                                    coordinates=(x, y, width, height), bb_type=BBType.DETECTED)
         return bounding_box
 

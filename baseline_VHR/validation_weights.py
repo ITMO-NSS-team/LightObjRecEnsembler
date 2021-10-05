@@ -1,10 +1,14 @@
 from typing import List
+from copy import deepcopy
 
-import pandas as pd
-import numpy as np
 import torch
+import torchvision
+import numpy as np
+import pandas as pd
 
-from baseline_VHR.VHR_experiment import apply_nms, calculate_coco_metrics
+from bounding_box import BoundingBox
+from baseline_VHR.evaluators.utils.enumerators import BBType
+from baseline_VHR.evaluators.coco_evaluator import get_coco_summary
 
 
 def scaling_weights(weights: List) -> List:
@@ -50,3 +54,41 @@ def validation_weights(models: List, dataset_validation) -> List:
 
     weights = scaling_weights(weights)
     return weights
+
+
+def apply_nms(orig_prediction, iou_thresh=0.3):
+    # torchvision returns the indices of the boxes to keep
+    keep = torchvision.ops.nms(orig_prediction['boxes'], orig_prediction['scores'], iou_thresh)
+
+    final_prediction = deepcopy(orig_prediction)
+    final_prediction['boxes'] = final_prediction['boxes'][keep]
+    final_prediction['scores'] = final_prediction['scores'][keep]
+    final_prediction['labels'] = final_prediction['labels'][keep]
+
+    return final_prediction
+
+
+def calculate_coco_metrics(target, prediction):
+    gt_bbs = []
+    detected_bbs = []
+
+    image_name = str(target['image_id'].tolist()[0] + 1)
+
+    for i in range(len(target['labels'].tolist())):
+        class_id = target['labels'].tolist()[i]
+        box = target['boxes'].tolist()[i]
+        x, y, width, height = box[0], box[1], box[2] - box[0], box[3] - box[1]
+        bounding_box = BoundingBox(image_name=image_name, class_id=class_id,
+                                   coordinates=(x, y, width, height), bb_type=BBType.GROUND_TRUTH)
+        gt_bbs.append(bounding_box)
+
+    for i in range(len(prediction['labels'].tolist())):
+        class_id = prediction['labels'].tolist()[i]
+        box = prediction['boxes'].tolist()[i]
+        x, y, width, height = box[0], box[1], box[2] - box[0], box[3] - box[1]
+        bounding_box = BoundingBox(image_name=image_name, class_id=class_id, coordinates=(x, y, width, height),
+                                   bb_type=BBType.DETECTED, confidence=prediction['scores'].tolist()[i])
+        detected_bbs.append(bounding_box)
+
+    coco_summary = get_coco_summary(gt_bbs, detected_bbs)
+    return coco_summary
