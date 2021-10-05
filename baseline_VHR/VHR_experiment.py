@@ -9,6 +9,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from baseline_VHR.validation_weights import validation_weights
 from bounding_box import BoundingBox
 from baseline_VHR.evaluators.utils.enumerators import BBType
 from baseline_VHR.evaluators.coco_evaluator import get_coco_summary
@@ -102,14 +103,10 @@ def ensemble_OD_predictions(bboxes: list,
                             labels: list,
                             scores: list,
                             image: np.ndarray,
-                            img_size: int = 416,
-                            area_threshold: float = 0.75,
-                            ensemble_type: str = 'Majority',
-                            vis_flag: bool = True):
-    if len(bboxes[0]) > len(bboxes[1]):
-        bboxes.reverse()
-        labels.reverse()
-        scores.reverse()
+                            weights: list,
+                            area_threshold: float = 0.75):
+    best_model_ind = np.argmax(weights)
+    weak_model_ind = 1 if best_model_ind == 0 else 0
 
     bboxes_merged = []
     labels_merged = []
@@ -123,12 +120,25 @@ def ensemble_OD_predictions(bboxes: list,
                              'Intersection area/Major NN area': [],
                              'New frame coordinates': []})
 
-    for index_1, first_box in enumerate(bboxes[0]):
-        for index_2, second_box in enumerate(bboxes[1]):
+    for index_1, first_box in enumerate(bboxes[weak_model_ind]):
+        for index_2, second_box in enumerate(bboxes[best_model_ind]):
             ratio, intersect_coord = rectangle_intersect(first_box, second_box)
             if ratio is None:
                 check_flag = True
             elif sum(ratio) > area_threshold:
+                CW1 = val_weights[best_model_ind] * scores[weak_model_ind][index_1]
+                CW2 = val_weights[weak_model_ind] * scores[best_model_ind][index_2]
+                if labels[weak_model_ind][index_1] == labels[best_model_ind][index_2]:
+                    chosen_box = second_box
+                    chosen_label = labels[best_model_ind][index_2]
+                    chosen_score = scores[best_model_ind][index_2]
+                else:
+                    best_CW_ind = np.argmax([CW1, CW2])
+                    chosen_box = first_box if best_CW_ind == 0 else second_box
+                    chosen_ind = index_1 if best_CW_ind == 0 else index_2
+                    chosen_label = labels[best_CW_ind][chosen_ind]
+                    chosen_score = scores[best_CW_ind][chosen_ind]
+
                 mergedDf = mergedDf.append({'Weak NN frame number': index_1,
                                             'Weak NN frame class': labels[0][index_1],
                                             'Major NN frame number': index_2,
@@ -142,13 +152,13 @@ def ensemble_OD_predictions(bboxes: list,
                 break
 
         if check_flag:
-            bboxes_merged.append(first_box)
-            labels_merged.append(labels[0][index_1])
-            scores_merged.append(scores[0][index_1])
+            bboxes_merged.append(chosen_box)
+            labels_merged.append(chosen_label)
+            scores_merged.append(chosen_score)
 
-    compose_bbox = list(itertools.chain(bboxes[1], bboxes_merged)),
-    compose_labels = list(itertools.chain(labels[1], labels_merged))
-    compose_scores = list(itertools.chain(scores[1], scores_merged))
+    compose_bbox = list(itertools.chain(bboxes[best_model_ind], bboxes_merged)),
+    compose_labels = list(itertools.chain(labels[best_model_ind], labels_merged))
+    compose_scores = list(itertools.chain(scores[best_model_ind], scores_merged))
 
     return {'boxes': np.array(compose_bbox[0]), 'labels': np.array(compose_labels), 'scores': np.array(compose_scores)}
 
@@ -233,7 +243,7 @@ model_2 = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
                                 max_size=params['MAX_SIZE'])
 
 train_mode = False
-dataset, dataset_test = train_test_split(VHRDataset)
+dataset, dataset_test, dataset_val = train_test_split(VHRDataset)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 filepath = "../local/VHR_statedict_fasterrcnn_resnet50_fpn.pth"
 filepath_2 = "../local/VHR_statedict_resnet18.pth"
@@ -323,10 +333,12 @@ if __name__ == '__main__':
         # print(metrics_18_nms)
 
         ### VISUALISE MODELS PREDICTIONS AFTER ENSEMBLING
-        compose_bbox = ensemble_OD_predictions([nms_prediction_2['boxes'], nms_prediction['boxes']],
-                                               [nms_prediction_2['labels'], nms_prediction['labels']],
-                                               [nms_prediction_2['scores'], nms_prediction['scores']],
-                                               image=img)
+        val_weights = validation_weights([model, model_2], dataset_val)
+        compose_bbox = ensemble_OD_predictions([nms_prediction['boxes'], nms_prediction_2['boxes']],
+                                               [nms_prediction['labels'], nms_prediction_2['labels']],
+                                               [nms_prediction['scores'], nms_prediction_2['scores']],
+                                               image=img,
+                                               weights=val_weights)
         plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=save,
                       image_id=image_id, show=show, path=path_prediction)
         metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
