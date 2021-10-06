@@ -197,7 +197,7 @@ model_4 = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
                               min_size=params['MIN_SIZE'],
                               max_size=params['MAX_SIZE'])
 
-save = True
+save = False
 show = False
 dataset, dataset_test, dataset_val = train_test_split(VHRDataset, validation_flag=True)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -251,6 +251,9 @@ if __name__ == '__main__':
         result_current_image = pd.DataFrame()
         img, target = dataset_test[i]
         image_id = str(target['image_id'].tolist()[0] + 1)
+        if image_id == '541':
+            save = True
+
         image_ids.append(image_id)
         plot_img_bbox(img, target, title='IMAGE', save=save,
                       image_id=image_id, show=show, path=path_prediction)
@@ -279,9 +282,9 @@ if __name__ == '__main__':
         all_prediction = filtering_ensemble(all_prediction, val_weights, image_id)
         all_val_weights = val_weights.copy()
 
-        for i, pred in enumerate(all_prediction):
-            plot_img_bbox(img, pred, title=f'{i}_filter', save=save,
-                          image_id=image_id, show=show, path=path_prediction)
+        # for i, pred in enumerate(all_prediction):
+        #     plot_img_bbox(img, pred, title=f'{i}_filter', save=save,
+        #                   image_id=image_id, show=show, path=path_prediction)
 
         while len(all_prediction) != 1:
             inter_val_weights = []
@@ -307,14 +310,20 @@ if __name__ == '__main__':
         all_metrics = [metrics_50, metrics_18, metrics_v3, metrics_121, metrics_50_nms,
                        metrics_18_nms, metrics_v3_nms, metrics_121_nms, metrics_ensemble_nms]
         all_names = ['resnet50', 'resnet18', 'mobilenet_v3', 'densenet_121', 'resnet50_nms',
-                     'resnet18_nms', 'mobilenet_v3_nms', 'densenet_121', 'ensemble']
+                     'resnet18_nms', 'mobilenet_v3_nms', 'densenet_121_nms', 'ensemble']
 
-        for res, met in zip(all_results, all_metrics):
-            res = res.append(met, ignore_index=True)
+        results_resnet50 = results_resnet50.append(metrics_50, ignore_index=True)
+        results_resnet18 = results_resnet18.append(metrics_18, ignore_index=True)
+        results_mobilev3 = results_mobilev3.append(metrics_v3, ignore_index=True)
+        results_densenet121 = results_densenet121.append(metrics_121, ignore_index=True)
+        results_resnet18_nms = results_resnet18_nms.append(metrics_18_nms, ignore_index=True)
+        results_resnet50_nms = results_resnet50_nms.append(metrics_50_nms, ignore_index=True)
+        results_mobilev3_nms = results_mobilev3_nms.append(metrics_v3_nms, ignore_index=True)
+        results_densenet121_nms = results_densenet121_nms.append(metrics_121_nms, ignore_index=True)
+        results_ensemble_nms = results_ensemble_nms.append(metrics_ensemble_nms, ignore_index=True)
 
         for name, met in zip(all_names, all_metrics):
             result_current_image[name] = list(met.values())
-
         result_current_image.index = columns
         result_current_image.to_csv(os.path.join(path_prediction, image_id, f'{image_id}.csv'))
 
