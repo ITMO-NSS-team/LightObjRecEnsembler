@@ -7,7 +7,7 @@ from baseline_VHR.evaluators.utils.enumerators import BBType
 
 
 def filtering_ensemble(predictions: List, weights: List, image_id: str,
-                       threshold_iou: float = 0.5, threshold_weights: float = None):
+                       threshold_iou: float = 0.5, threshold_weights: float = 0.5):
     """
 
     Args:
@@ -61,13 +61,17 @@ def filtering_ensemble(predictions: List, weights: List, image_id: str,
                     new_prediction.append(bb_2)
             predictions[index_model] = new_prediction
 
-        weights_sum = 0
+        weights_array = []
         for pair in intermediate_bbs:
             i = pair[1]
-            if i == index_max_weight:
-                weights_sum += weights[i]
-            else:
-                weights_sum += weights[i] * weights[i]
+            weights_array.append(weights[i])
+
+        weights_sum = 0
+        if len(weights_array) == 1:
+            weights_sum = weights_array[0]
+        else:
+            for i, w in enumerate(sorted(weights_array)):
+                weights_sum += w * (2 ** i)
 
         if weights_sum >= threshold_weights:
             for pair in intermediate_bbs:

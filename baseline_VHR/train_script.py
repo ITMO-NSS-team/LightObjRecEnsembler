@@ -40,8 +40,8 @@ def train_model(model, device, dataset, dataset_test, num_epochs=10):
         lr_scheduler.step()
         # evaluate on the test dataset
         evaluate(model, data_loader_test, device=device)
-    path = "./VHR_mobilenet_v3_large.pth"
-    filepath = "./VHR_mobilenet_v3_large.pth"
+    path = "./VHR_densenet201.pth"
+    filepath = "./VHR_statedict_densenet201.pth"
     torch.save(model, path)
     torch.save(model.state_dict(), filepath)
 
@@ -55,7 +55,7 @@ params = {'BATCH_SIZE': 32,
           'PROJECT': 'Heads',
           'EXPERIMENT': 'heads',
           'MAXEPOCHS': 500,
-          'BACKBONE': 'mobilenet_v3_large',
+          'BACKBONE': 'densenet201',
           'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
           'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
           'MIN_SIZE': 1024,

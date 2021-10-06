@@ -1,4 +1,3 @@
-from copy import deepcopy
 import gc
 import itertools
 import os
@@ -14,7 +13,8 @@ from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 from baseline_VHR.utils.ensemble import Rectangle
 from baseline_VHR.filtering_ensembel import filtering_ensemble
-from baseline_VHR.validation_weights import validation_weights, apply_nms, calculate_coco_metrics
+from baseline_VHR.validation_weights import validation_weights, calculate_coco_metrics
+from baseline_VHR.utils.utils import visualise_model_prediction, visualise_model_prediction_nms
 
 
 def get_transform(train):
@@ -47,7 +47,6 @@ def rectangle_intersect(first_box: list,
 def ensemble_OD_predictions(bboxes: list,
                             labels: list,
                             scores: list,
-                            image: np.ndarray,
                             weights: list,
                             area_threshold: float = 0.75):
     best_model_ind = np.argmax(weights)
@@ -144,24 +143,51 @@ model_2 = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
                                 min_size=params['MIN_SIZE'],
                                 max_size=params['MAX_SIZE'])
 
+params = {'BATCH_SIZE': 32,
+          'LR': 0.001,
+          'PRECISION': 32,
+          'CLASSES': num_classes,
+          'SEED': 42,
+          'PROJECT': 'Heads',
+          'EXPERIMENT': 'heads',
+          'MAXEPOCHS': 500,
+          'BACKBONE': 'mobilenet_v3_large',
+          'ANCHOR_SIZE': ((32, 64, 128, 256, 512),),
+          'ASPECT_RATIOS': ((0.5, 1.0, 2.0),),
+          'MIN_SIZE': 1024,
+          'MAX_SIZE': 1024,
+          'IMG_MEAN': [0.485, 0.456, 0.406],
+          'IMG_STD': [0.229, 0.224, 0.225],
+          'IOU_THRESHOLD': 0.5
+          }
+
+model_3 = get_fasterRCNN_resnet(num_classes=params['CLASSES'],
+                              backbone_name=params['BACKBONE'],
+                              anchor_size=params['ANCHOR_SIZE'],
+                              aspect_ratios=params['ASPECT_RATIOS'],
+                              min_size=params['MIN_SIZE'],
+                              max_size=params['MAX_SIZE'])
+
 save = True
 show = False
 dataset, dataset_test, dataset_val = train_test_split(VHRDataset, validation_flag=True)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 filepath = "../local/VHR_statedict_fasterrcnn_resnet50_fpn.pth"
 filepath_2 = "../local/VHR_statedict_resnet18.pth"
+filepath_3 = "../local/VHR_statedict_mobilenet_v3_large.pth"
 path = os.path.dirname(os.path.abspath(__file__))
-path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'new_predictions')
+path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'predictions_mobilev3_resnet50')
 
 if __name__ == '__main__':
     model.load_state_dict(torch.load(filepath))
     model_2.load_state_dict(torch.load(filepath_2))
+    model_3.load_state_dict(torch.load(filepath_3, map_location=device))
 
     model.eval()
     model_2.eval()
+    model_3.eval()
 
-    val_weights = validation_weights([model, model_2], dataset_val)
-    # val_weights = [1, 0]
+    val_weights = validation_weights([model, model_2, model_3], dataset_val)
 
     columns = [
         "AP",
@@ -180,8 +206,10 @@ if __name__ == '__main__':
     image_ids = []
     results_resnet50 = pd.DataFrame(columns=columns)
     results_resnet18 = pd.DataFrame(columns=columns)
+    results_mobilev3 = pd.DataFrame(columns=columns)
     results_resnet50_nms = pd.DataFrame(columns=columns)
     results_resnet18_nms = pd.DataFrame(columns=columns)
+    results_mobilev3_nms = pd.DataFrame(columns=columns)
     results_ensemble_nms = pd.DataFrame(columns=columns)
 
     for i in range(len(dataset_test)):
@@ -195,79 +223,60 @@ if __name__ == '__main__':
         with torch.no_grad():
             prediction = model([img.to(device)])[0]
             prediction_2 = model_2([img.to(device)])[0]
+            prediction_3 = model_3([img.to(device)])[0]
 
         ### VISUALISE MODELS PREDICTIONS
-        pred = deepcopy(prediction)
-        pred['boxes'] = pred['boxes'].cpu().numpy()
-        metrics_50 = calculate_coco_metrics(target, pred)
-        plot_img_bbox(img, pred, title='RESNET50', save=save,
-                      image_id=image_id, show=show, path=path_prediction)
-
-        pred = deepcopy(prediction_2)
-        pred['boxes'] = pred['boxes'].cpu().numpy()
-        metrics_18 = calculate_coco_metrics(target, pred)
-        plot_img_bbox(img, pred, title='RESNET18', save=save,
-                      image_id=image_id, show=show, path=path_prediction)
+        metrics_50 = visualise_model_prediction(prediction, target, img, image_id, save, show, path_prediction, 'RESNET50')
+        metrics_18 = visualise_model_prediction(prediction_2, target, img, image_id, save, show, path_prediction, 'RESNET18')
+        metrics_v3 = visualise_model_prediction(prediction_3, target, img, image_id, save, show, path_prediction, 'mobilenet_v3')
 
         ### VISUALISE MODELS PREDICTIONS AFTER IOU_THERESHOLD
-        nms_prediction = apply_nms(prediction, iou_thresh=0.01)
-        nms_prediction_2 = apply_nms(prediction_2, iou_thresh=0.01)
+        nms_prediction, metrics_50_nms = visualise_model_prediction_nms(prediction, target, img, image_id, save, show, path_prediction, 'RESNET50_NMS')
+        nms_prediction_2, metrics_18_nms = visualise_model_prediction_nms(prediction_2, target, img, image_id, save, show, path_prediction, 'RESNET18_NMS')
+        nms_prediction_3, metrics_v3_nms = visualise_model_prediction_nms(prediction_3, target, img, image_id, save, show, path_prediction, 'mobilenet_v3_NMS')
 
-        nms_prediction['boxes'] = nms_prediction['boxes'].cpu().numpy()
-        nms_prediction_2['boxes'] = nms_prediction_2['boxes'].cpu().numpy()
-        nms_prediction['labels'] = nms_prediction['labels'].cpu().numpy()
-        nms_prediction_2['labels'] = nms_prediction_2['labels'].cpu().numpy()
-        nms_prediction['scores'] = nms_prediction['scores'].cpu().numpy()
-        nms_prediction_2['scores'] = nms_prediction_2['scores'].cpu().numpy()
-
-        plot_img_bbox(img, nms_prediction, title='RESNET50_NMS', save=save,
-                      image_id=image_id, show=show, path=path_prediction)
-        metrics_50_nms = calculate_coco_metrics(target, nms_prediction)
-
-        plot_img_bbox(img, nms_prediction_2, title='RESNET18_NMS', save=save,
-                      image_id=image_id, show=show, path=path_prediction)
-        metrics_18_nms = calculate_coco_metrics(target, nms_prediction_2)
+        all_prediction = [nms_prediction, nms_prediction_2, nms_prediction_3]
 
         ### VISUALISE MODELS PREDICTIONS AFTER ENSEMBLING
-        nms_prediction, nms_prediction_2 = filtering_ensemble([nms_prediction, nms_prediction_2], val_weights, image_id)
+        all_prediction = filtering_ensemble(all_prediction, val_weights, image_id)
 
-        compose_bbox = ensemble_OD_predictions([nms_prediction['boxes'], nms_prediction_2['boxes']],
-                                               [nms_prediction['labels'], nms_prediction_2['labels']],
-                                               [nms_prediction['scores'], nms_prediction_2['scores']],
-                                               image=img,
-                                               weights=val_weights)
+        while len(all_prediction) != 1:
+            nms_pred = all_prediction.pop()
+            nms_pred_2 = all_prediction.pop()
+            compose_bbox = ensemble_OD_predictions([nms_pred['boxes'], nms_pred_2['boxes']],
+                                                   [nms_pred['labels'], nms_pred_2['labels']],
+                                                   [nms_pred['scores'], nms_pred_2['scores']],
+                                                   weights=val_weights)
+            all_prediction.append(compose_bbox)
+        compose_bbox = all_prediction[0]
+
         plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=save,
                       image_id=image_id, show=show, path=path_prediction)
         metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
-        # print("ENSEMBLE:")
-        # print(metrics_ensemble_nms)
-
-        results_resnet50 = results_resnet50.append(metrics_50, ignore_index=True)
-        results_resnet18 = results_resnet18.append(metrics_18, ignore_index=True)
-        results_resnet18_nms = results_resnet18_nms.append(metrics_18_nms, ignore_index=True)
-        results_resnet50_nms = results_resnet50_nms.append(metrics_50_nms, ignore_index=True)
-        results_ensemble_nms = results_ensemble_nms.append(metrics_ensemble_nms, ignore_index=True)
 
         ### SAVE METRICS FOR CURRENT IMAGE
-        result_current_image['resnet50'] = list(metrics_50.values())
-        result_current_image['resnet18'] = list(metrics_18.values())
-        result_current_image['resnet18_nms'] = list(metrics_18_nms.values())
-        result_current_image['resnet50_nms'] = list(metrics_50_nms.values())
-        result_current_image['ensemble'] = list(metrics_ensemble_nms.values())
+        all_results = [results_resnet50, results_resnet18, results_mobilev3,
+                       results_resnet50_nms, results_resnet18_nms, results_mobilev3_nms, results_ensemble_nms]
+        all_metrics = [metrics_50, metrics_18, metrics_v3, metrics_50_nms,
+                       metrics_18_nms, metrics_v3_nms, metrics_ensemble_nms]
+        all_names = ['resnet50', 'resnet18', 'mobilenet_v3', 'resnet50_nms', 'resnet18_nms', 'mobilenet_v3_nms', 'ensemble']
+
+        for res, met in zip(all_results, all_metrics):
+            res = res.append(met, ignore_index=True)
+
+        for name, met in zip(all_names, all_metrics):
+            result_current_image[name] = list(met.values())
+
         result_current_image.index = columns
         result_current_image.to_csv(os.path.join(path_prediction, image_id, f'{image_id}.csv'))
 
         # TODO apply_nms after ensemble
 
-    results_resnet50['image_id'] = image_ids
-    results_resnet18['image_id'] = image_ids
-    results_resnet18_nms['image_id'] = image_ids
-    results_resnet50_nms['image_id'] = image_ids
-    results_ensemble_nms['image_id'] = image_ids
+    ### SAVE CSV FILES
+    for res in all_results:
+        res['image_id'] = image_ids
 
-    results_resnet50.to_csv(os.path.join(path_prediction, 'results_resnet50.csv'))
-    results_resnet18_nms.to_csv(os.path.join(path_prediction, 'results_resnet18_nms.csv'))
-    results_resnet18.to_csv(os.path.join(path_prediction, 'results_resnet18.csv'))
-    results_resnet50_nms.to_csv(os.path.join(path_prediction, 'results_resnet50_nms.csv'))
-    results_ensemble_nms.to_csv(os.path.join(path_prediction, 'results_ensemble_nms.csv'))
+    for res, name in zip(all_results, all_names):
+        res.to_csv(os.path.join(path_prediction, f'{name}.csv'))
+
     gc.collect()

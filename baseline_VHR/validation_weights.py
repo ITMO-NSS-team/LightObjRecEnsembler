@@ -15,15 +15,13 @@ def scaling_weights(weights: List) -> List:
     """Scaling weight to scale (0, 1)."""
     res_weights = []
     # Weights for metrics. AP - the first one primary challenge metric.
-    metrics_weight = [1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
+    metrics_weight = [1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
 
     for w in weights:
-        w = [y for x in [[w[0]], w[3:]] for y in x]
-
         w = [a * b for a, b in zip(w, metrics_weight)]
         res_weights.append(np.mean(w))
 
-    return list((res_weights - min(res_weights)) / (max(res_weights) - min(res_weights)))
+    return list(res_weights / sum(res_weights))
 
 
 def validation_weights(models: List, dataset_validation) -> List:
@@ -44,7 +42,7 @@ def validation_weights(models: List, dataset_validation) -> List:
             with torch.no_grad():
                 prediction = model([img.to(device)])[0]
 
-            nms_prediction = apply_nms(prediction, iou_thresh=0.01)
+            nms_prediction = apply_nms(prediction)
             metric_nms = calculate_coco_metrics(target, nms_prediction)
 
             results = results.append(metric_nms, ignore_index=True)

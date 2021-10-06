@@ -1,0 +1,13 @@
+,resnet50,mobilenet_v3,mobilenet_v3_NMS,resnet50_nms,ensemble
+AP,0.3,0.0,0.0,0.3,0.3
+AP50,1.0,0.0,0.0,1.0,1.0
+AP75,0.0,0.0,0.0,0.0,0.0
+APsmall,,,,,
+APmedium,,,,,
+APlarge,0.3,0.0,0.0,0.3,0.3
+AR1,0.3,0.0,0.0,0.3,0.3
+AR10,0.3,0.0,0.0,0.3,0.3
+AR100,0.3,0.0,0.0,0.3,0.3
+ARsmall,,,,,
+ARmedium,,,,,
+ARlarge,0.3,0.0,0.0,0.3,0.3
