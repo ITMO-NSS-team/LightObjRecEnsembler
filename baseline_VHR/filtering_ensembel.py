@@ -50,16 +50,11 @@ def filtering_ensemble(predictions: List, weights: List, image_id: str,
         intermediate_bbs.append((bb_1, index_max_weight))
 
         for index_model, prediction in enumerate(predictions):
-            new_prediction = []
-
             for index_bb, bb_2 in enumerate(prediction):
                 if (intersection.get_class_id() == bb_2.get_class_id()) and \
                         (BoundingBox.iou(intersection, bb_2) >= threshold_iou):
                     intersection = BoundingBox.get_intersection(intersection, bb_2)
                     intermediate_bbs.append((bb_2, index_model))
-                else:
-                    new_prediction.append(bb_2)
-            predictions[index_model] = new_prediction
 
         weights_array = []
         for pair in intermediate_bbs:
