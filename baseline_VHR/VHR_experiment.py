@@ -206,7 +206,7 @@ filepath_2 = "../local/VHR_statedict_resnet18.pth"
 filepath_3 = "../local/VHR_statedict_mobilenet_v3_large.pth"
 filepath_4 = "../local/VHR_statedict_densenet121.pth"
 path = os.path.dirname(os.path.abspath(__file__))
-path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'predictions_4_models')
+path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'last_prediction_4_models')
 
 if __name__ == '__main__':
     model.load_state_dict(torch.load(filepath))
@@ -251,9 +251,6 @@ if __name__ == '__main__':
         result_current_image = pd.DataFrame()
         img, target = dataset_test[i]
         image_id = str(target['image_id'].tolist()[0] + 1)
-        if image_id == '541':
-            save = True
-
         image_ids.append(image_id)
         plot_img_bbox(img, target, title='IMAGE', save=save,
                       image_id=image_id, show=show, path=path_prediction)
@@ -300,7 +297,7 @@ if __name__ == '__main__':
             all_val_weights.append(max(inter_val_weights))
         compose_bbox = all_prediction[0]
 
-        plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=save,
+        plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=True,
                       image_id=image_id, show=show, path=path_prediction)
         metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
 
