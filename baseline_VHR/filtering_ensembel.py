@@ -7,7 +7,7 @@ from baseline_VHR.evaluators.utils.enumerators import BBType
 
 
 def filtering_ensemble(predictions: List, weights: List, image_id: str,
-                       threshold_iou: float = 0.2, threshold_weights: float = 0.6):
+                       threshold_iou: float = 0.5, threshold_weights: float = 0.6):
     """
 
     Args:
