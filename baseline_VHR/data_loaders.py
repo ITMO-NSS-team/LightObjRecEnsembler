@@ -89,17 +89,14 @@ class VHRDataset(torch.utils.data.Dataset):
 class xViewDataset(torch.utils.data.Dataset):
 
     classes = []
-    def __init__(self, root, transforms):
-        self.root = root
+    def __init__(self, transforms = None):
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
-        path_to_image_folder = ""
-        path_to_json_file = ""
+        path_to_image_folder = "./data/train_images"
+        path_to_json_file = "./data/xView_train.geojson"
         self.imgs, self.boxes, self.classes = read_xView(path_to_image_folder, path_to_json_file)
 
-        #self.imgs = list(sorted(os.listdir(os.path.join(self.root, "positive image set"))))
-        #self.boxes = list(sorted(os.listdir(os.path.join(self.root, "ground truth"))))
 
     def __getitem__(self, idx):
         img = Image.open(self.imgs[idx]).convert("RGB")

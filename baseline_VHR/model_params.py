@@ -1,4 +1,4 @@
-num_classes = 11
+num_classes = 60
 params_fasterrcnn_resnet50_fpn = {'BATCH_SIZE': 32,
                                   'LR': 0.001,
                                   'PRECISION': 32,
@@ -71,3 +71,8 @@ params_densenet121 = {'BATCH_SIZE': 32,
                       'IMG_STD': [0.229, 0.224, 0.225],
                       'IOU_THRESHOLD': 0.5
                       }
+
+xView_model_dict = {'densenet121': params_densenet121,
+                    'mobilenet_v3_large': params_mobilenet_v3_large,
+                    'fasterrcnn_resnet50_fpn': params_fasterrcnn_resnet50_fpn,
+                    'resnet18': params_resnet18}
