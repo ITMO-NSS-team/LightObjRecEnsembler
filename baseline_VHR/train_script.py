@@ -8,7 +8,12 @@ from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 import baseline_VHR.torch_utils.utils as utils
 
 
-def train_model(model, device, dataset, dataset_test, num_epochs=10):
+def train_model(model,
+                device,
+                dataset,
+                dataset_test,
+                num_epochs=10):
+
     gc.collect()
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
