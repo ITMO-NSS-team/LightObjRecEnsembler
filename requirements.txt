@@ -16,7 +16,7 @@ pycocotools==2.0.2
 PyQt5==5.15.4
 pytorch_lightning==1.4.7
 scikit_learn==0.24.2
-skimage==0.0
+sscikit-image==0.19.2
 tensorflow==2.6.0
 torchnet==0.0.4
 visdom==0.1.8.9
