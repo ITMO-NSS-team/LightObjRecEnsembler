@@ -67,35 +67,35 @@ def get_fasterRCNN(backbone: torch.nn.Module,
     return model
 
 
-def get_fasterRCNN_resnet(num_classes: int,
-                          backbone_name: str,
-                          anchor_size: List[float],
-                          aspect_ratios: List[float],
-                          min_size: int = 512,
-                          max_size: int = 1024,
+def get_fasterRCNN_resnet(CLASSES: int,
+                          BACKBONE: str,
+                          ANCHOR_SIZE: List[float],
+                          ASPECT_RATIOS: List[float],
+                          MIN_SIZE: int = 512,
+                          MAX_SIZE: int = 1024,
                           **kwargs
                           ):
     """Returns the Faster-RCNN model with resnet backbone with and without fpn."""
 
     # Backbone
-    if 'fpn' in backbone_name:
-        model = get_fpn_backbone(backbone_name=backbone_name)
+    if 'fpn' in BACKBONE:
+        model = get_fpn_backbone(backbone_name=BACKBONE)
         in_features = model.roi_heads.box_predictor.cls_score.in_features
         # replace the pre-trained head with a new one
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, CLASSES)
         return model
-    elif 'resnet' in backbone_name:
-        backbone = get_resnet_backbone(backbone_name=backbone_name)
-    elif 'densenet' in backbone_name:
-        backbone = get_densenet_backbone(backbone_name=backbone_name)
-    elif 'mobilenet' in backbone_name:
-        backbone = get_mobilenet_backbone(backbone_name=backbone_name)
+    elif 'resnet' in BACKBONE:
+        backbone = get_resnet_backbone(backbone_name=BACKBONE)
+    elif 'densenet' in BACKBONE:
+        backbone = get_densenet_backbone(backbone_name=BACKBONE)
+    elif 'mobilenet' in BACKBONE:
+        backbone = get_mobilenet_backbone(backbone_name=BACKBONE)
     else:
         ValueError("Invalid model name, exiting...")
 
     # Anchors
-    anchor_size = anchor_size
-    aspect_ratios = aspect_ratios * len(anchor_size)
+    anchor_size = ANCHOR_SIZE
+    aspect_ratios = ASPECT_RATIOS * len(anchor_size)
     anchor_generator = get_anchor_generator(anchor_size=anchor_size, aspect_ratios=aspect_ratios)
 
     # ROI Pool
@@ -117,9 +117,9 @@ def get_fasterRCNN_resnet(num_classes: int,
     return get_fasterRCNN(backbone=backbone,
                           anchor_generator=anchor_generator,
                           roi_pooler=roi_pool,
-                          num_classes=num_classes,
-                          min_size=min_size,
-                          max_size=max_size,
+                          num_classes=CLASSES,
+                          min_size=MIN_SIZE,
+                          max_size=MAX_SIZE,
                           **kwargs)
 
 

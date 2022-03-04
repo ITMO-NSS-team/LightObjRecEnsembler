@@ -18,6 +18,7 @@ from baseline_VHR.filtering_ensembel import filtering_ensemble
 from baseline_VHR.validation_weights import validation_weights, calculate_coco_metrics
 from baseline_VHR.utils.utils import visualise_model_prediction, visualise_model_prediction_nms
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 class PerformExperiment:
     def __init__(self,
@@ -142,7 +143,7 @@ class PerformExperiment:
             model.eval()
             self.loaded_model_list.append(model)
 
-    def fit(self):
+    def fit(self, dataset_test):
         for model_name in self.model_list:
             model = self.get_model(model_name)
             train_model(model, device, dataset, dataset_test, num_epochs=15)
@@ -245,8 +246,10 @@ if __name__ == '__main__':
                                      params=xView_model_dict)
 
     dataset = xViewDataset()
-    #dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    dataset_test = xViewDataset(val_flag=True)
+    experimenter.fit(dataset_test)
+    # dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
+
 
     path = os.path.dirname(os.path.abspath(__file__))
     path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'last_prediction_4_models')

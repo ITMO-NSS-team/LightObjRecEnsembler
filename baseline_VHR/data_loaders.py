@@ -86,17 +86,21 @@ class VHRDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.imgs)
 
-class xViewDataset(torch.utils.data.Dataset):
 
+class xViewDataset(torch.utils.data.Dataset):
     classes = []
-    def __init__(self, transforms = None):
+
+    def __init__(self,
+                 val_flag: bool = False,
+                 transforms=None):
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
         path_to_image_folder = "./data/train_images"
+        if val_flag:
+            path_to_image_folder = "./data/val_images"
         path_to_json_file = "./data/xView_train.geojson"
         self.imgs, self.boxes, self.classes = read_xView(path_to_image_folder, path_to_json_file)
-
 
     def __getitem__(self, idx):
         img = Image.open(self.imgs[idx]).convert("RGB")
@@ -119,6 +123,7 @@ class xViewDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
 
 def _is_more_than_zero(box: list) -> bool:
     out = True
@@ -183,8 +188,8 @@ def read_xView(images_path: str, json_path: str) -> list:
 
 
 class YOLODataset(torch.utils.data.Dataset):
-
     classes = []
+
     def __init__(self, root, transforms):
         self.root = root
         self.transforms = transforms
@@ -194,8 +199,8 @@ class YOLODataset(torch.utils.data.Dataset):
         path_to_txt_folder = ""
         self.imgs, self.boxes, self.classes = read_yolov4(path_to_image_folder, path_to_json_file)
 
-        #self.imgs = list(sorted(os.listdir(os.path.join(self.root, "positive image set"))))
-        #self.boxes = list(sorted(os.listdir(os.path.join(self.root, "ground truth"))))
+        # self.imgs = list(sorted(os.listdir(os.path.join(self.root, "positive image set"))))
+        # self.boxes = list(sorted(os.listdir(os.path.join(self.root, "ground truth"))))
 
     def __getitem__(self, idx):
         img = Image.open(self.imgs[idx]).convert("RGB")
@@ -220,20 +225,20 @@ class YOLODataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 
-
 def from_yolo_to_rec(box: list, image_width: int, image_height: int) -> list:
-        """
+    """
         This method turns annotations in YOLO format into rectangle coordinates
         """
-        box_w = int(box[2] * image_width)
-        box_h = int(box[3] * image_height)
-        x_mid = int(box[0] * image_width + 1)
-        y_mid = int(box[1] * image_height + 1)
-        x_min = int(x_mid - box_w / 2) + 1
-        x_max = int(x_mid + box_w / 2) - 1
-        y_min = int(y_mid - box_h / 2) + 1
-        y_max = int(y_mid + box_h / 2) - 1
-        return [x_min, y_min, x_max, y_max]
+    box_w = int(box[2] * image_width)
+    box_h = int(box[3] * image_height)
+    x_mid = int(box[0] * image_width + 1)
+    y_mid = int(box[1] * image_height + 1)
+    x_min = int(x_mid - box_w / 2) + 1
+    x_max = int(x_mid + box_w / 2) - 1
+    y_min = int(y_mid - box_h / 2) + 1
+    y_max = int(y_mid + box_h / 2) - 1
+    return [x_min, y_min, x_max, y_max]
+
 
 def read_yolov4(images_path: str, annotations_path: str) -> list:
     """
@@ -268,7 +273,7 @@ def read_yolov4(images_path: str, annotations_path: str) -> list:
             for i in tqdm(range(pair_count), colour="blue"):
                 out_images.append(join(images_path, image_list[i]))
 
-                objects_classes=[]
+                objects_classes = []
                 objects = []
                 rec_objects = []
                 img = Image.open(join(images_path, image_list[i]))
@@ -297,4 +302,3 @@ def read_yolov4(images_path: str, annotations_path: str) -> list:
         print(f"There is {len(txt_list) - len(image_list)} txt files without pairs")
         return [], []
     return out_images, out_boxes, out_classes
-
