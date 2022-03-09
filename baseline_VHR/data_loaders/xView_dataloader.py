@@ -84,7 +84,7 @@ class xViewDataset(torch.utils.data.Dataset):
                 class_of_object = data['features'][i]['properties']['type_id']
                 if not class_of_object in list_of_classes:
                     list_of_classes.append(class_of_object)
-                if object_bb.shape[0] != 4:
+                if object_bb.shape != (4,):
                     print("Issues at %d!" % i)
                     return [], [], []
                 if image == "":
@@ -103,9 +103,10 @@ class xViewDataset(torch.utils.data.Dataset):
                         img = Image.open(join(images_path, image)).convert("RGB")
                         img_width, img_height = img.size
                         if self._is_in_bounds(objects, img_width, img_height):
-                            out_images.append(join(images_path, image))
-                            out_boxes.append(objects)
-                            out_classes.append(classes)
+                            if len(objects):
+                                out_images.append(join(images_path, image))
+                                out_boxes.append(objects)
+                                out_classes.append(classes)
                     image = image_name
                     objects = []
                     classes = []
@@ -117,9 +118,10 @@ class xViewDataset(torch.utils.data.Dataset):
             img = Image.open(join(images_path, image)).convert("RGB")
             img_width, img_height = img.size
             if self._is_in_bounds(objects, img_width, img_height):
-                out_images.append(join(images_path, image))
-                out_boxes.append(objects)
-                out_classes.append(classes)
+                if len(objects):
+                    out_images.append(join(images_path, image))
+                    out_boxes.append(objects)
+                    out_classes.append(classes)
 
         list_of_classes.sort()
         print(list_of_classes)
