@@ -2,7 +2,14 @@ import gc
 
 import torch
 
-from baseline_VHR.data_loaders import train_test_split, VHRDataset
+# Datasets' loaders
+from baseline_VHR.data_loaders.xView_dataloader import xViewDataset
+from baseline_VHR.data_loaders.METU_dataloader import METUDataset
+from baseline_VHR.data_loaders.YOLO_dataloader import YOLODataset
+#Datasets' things
+from baseline_VHR.data_loaders.data_constants import METU_TEST, METU_TRAIN, METU_VAL
+from baseline_VHR.data_utils.data_split import train_test_split
+
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 import baseline_VHR.torch_utils.utils as utils
@@ -12,16 +19,16 @@ def train_model(model,
                 device,
                 dataset,
                 dataset_test,
-                num_epochs=10):
+                num_epochs=1):
 
     gc.collect()
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=10, shuffle=True, num_workers=4,
+        dataset, batch_size=2, shuffle=True, num_workers=4,
         collate_fn=utils.collate_fn)
 
     data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=10, shuffle=False, num_workers=4,
+        dataset_test, batch_size=2, shuffle=False, num_workers=4,
         collate_fn=utils.collate_fn)
     # model = get_object_detection_model(num_classes)
     # move model to the right device
@@ -40,12 +47,12 @@ def train_model(model,
 
     for epoch in range(num_epochs):
         # training for one epoch
-        train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+        train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=1)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
         evaluate(model, data_loader_test, device=device)
-    path = "./VHR_densenet121.pth"
-    filepath = "./VHR_statedict_densenet121.pth"
+    path = "/media/nikita/HDD/models/test1.pth"
+    filepath = "/media/nikita/HDD/models/test1_1.pth"
     torch.save(model, path)
     torch.save(model.state_dict(), filepath)

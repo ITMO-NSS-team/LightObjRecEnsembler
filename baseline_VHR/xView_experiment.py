@@ -1,18 +1,29 @@
 import gc
 import itertools
 import os
-
+import sys
+sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
 import pandas as pd
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+import baseline_VHR.torch_utils.transforms as T
+
 
 from baseline_VHR.train_script import train_model
-from model_params import *
-import baseline_VHR.torch_utils.transforms as T
-from baseline_VHR.data_loaders import train_test_split, xViewDataset
-from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
+
+# Model's params. IMPORTANT!
+from model_params import *
+# Datasets' loaders
+from baseline_VHR.data_loaders.xView_dataloader import xViewDataset
+from baseline_VHR.data_loaders.METU_dataloader import METUDataset
+from baseline_VHR.data_loaders.YOLO_dataloader import YOLODataset
+#Datasets' things
+from baseline_VHR.data_loaders.data_constants import METU_TEST, METU_TRAIN, METU_VAL
+from baseline_VHR.data_utils.data_split import train_test_split
+
+from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.utils.ensemble import Rectangle
 from baseline_VHR.filtering_ensembel import filtering_ensemble
 from baseline_VHR.validation_weights import validation_weights, calculate_coco_metrics
@@ -23,7 +34,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 class PerformExperiment:
     def __init__(self,
                  model_list: list,
-                 num_classes: int = 11,
+                 num_classes: int = 65,
                  params: dict = None):
         self.model_list = model_list
         self.num_classes = num_classes
@@ -227,9 +238,9 @@ class PerformExperiment:
 
 if __name__ == '__main__':
     save = False
-    show = False
+    show = True
 
-    num_classes = 60
+    num_classes = 62
     model_list = ['fasterrcnn_resnet50_fpn',
                   'resnet18',
                   'mobilenet_v3_large',
@@ -246,7 +257,7 @@ if __name__ == '__main__':
                                      params=xView_model_dict)
 
     dataset = xViewDataset()
-    dataset_test = xViewDataset(val_flag=True)
+    dataset_test = dataset
     experimenter.fit(dataset_test)
     # dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
 

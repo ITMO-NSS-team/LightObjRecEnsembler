@@ -1,4 +1,4 @@
-num_classes = 60
+num_classes = 62
 params_fasterrcnn_resnet50_fpn = {'BATCH_SIZE': 32,
                                   'LR': 0.001,
                                   'PRECISION': 32,

@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from baseline_VHR.train_script import train_model
 from model_params import *
 import baseline_VHR.torch_utils.transforms as T
-from baseline_VHR.data_loaders import train_test_split, VHRDataset
+from baseline_VHR.data_loaders.data_loaders import train_test_split, VHRDataset
 from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 from baseline_VHR.utils.ensemble import Rectangle

@@ -9,7 +9,7 @@ from torchvision.ops import MultiScaleRoIAlign
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 from baseline_VHR.backbone_templates import get_resnet_backbone, get_densenet_backbone, get_fpn_backbone, get_mobilenet_backbone
-from baseline.utils.utils import from_dict_to_BoundingBox
+from baseline_utils.utils import from_dict_to_BoundingBox
 
 
 def get_anchor_generator(anchor_size: Tuple[tuple] = None, aspect_ratios: Tuple[tuple] = None):
