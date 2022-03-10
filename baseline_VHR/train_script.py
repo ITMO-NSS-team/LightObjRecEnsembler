@@ -1,20 +1,11 @@
 import gc
-
 import torch
+import baseline_VHR.torch_utils.utils as utils
 
-# Datasets' loaders
-from baseline_VHR.data_loaders.xView_dataloader import xViewDataset
-from baseline_VHR.data_loaders.METU_dataloader import METUDataset
-from baseline_VHR.data_loaders.YOLO_dataloader import YOLODataset
-#Datasets' things
-from baseline_VHR.data_loaders.data_constants import METU_TEST, METU_TRAIN, METU_VAL
-from baseline_VHR.data_utils.data_split import train_test_split
-
-from baseline_VHR.constants.train_constants import BATCH_SIZE_TRAIN, EPOCH_NUMBER
-
+from baseline_VHR.constants.train_constants import BATCH_SIZE_TRAIN
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
-import baseline_VHR.torch_utils.utils as utils
+
 
 
 def train_model(model,

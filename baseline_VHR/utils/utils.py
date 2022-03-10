@@ -3,6 +3,7 @@ from copy import deepcopy
 from baseline_VHR.validation_weights import calculate_coco_metrics
 from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.validation_weights import apply_nms
+import torchvision.transforms as transforms
 
 
 def visualise_model_prediction(prediction, target, img, image_id, save, show, path_prediction, title):
@@ -23,3 +24,14 @@ def visualise_model_prediction_nms(prediction, target, img, image_id, save, show
                   image_id=image_id, show=show, path=path_prediction)
     metrics = calculate_coco_metrics(target, nms_prediction)
     return nms_prediction, metrics
+
+
+def torch_to_pil(img):
+        """
+        Method converts image to PILimgae
+
+        :param img - input image
+
+        :return PIL image
+        """
+        return transforms.ToPILImage()(img).convert('RGB')

@@ -27,18 +27,25 @@ from baseline_VHR.data_utils.data_split import train_test_split
 from baseline_VHR.constants.train_constants import EPOCH_NUMBER
 
 from baseline_VHR.visualization import plot_img_bbox
-from baseline_VHR.utils.ensemble import Rectangle
+from baseline_VHR.utils.utils import torch_to_pil
+from baseline_VHR.utils.bounding_boxes_utils import rectangle_intersect
 from baseline_VHR.filtering_ensembel import filtering_ensemble
 from baseline_VHR.validation_weights import validation_weights, calculate_coco_metrics
 from baseline_VHR.utils.utils import visualise_model_prediction, visualise_model_prediction_nms
 
+
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 class PerformExperiment:
+    """
+    Main class of projects, contains models and functions for loading, fitting, testing and ensembling.
+    
+    """
     def __init__(self,
                  model_list: list,
                  num_classes: int = 62,
                  params: dict = None):
+
         self.model_list = model_list
         self.num_classes = num_classes
         self.params = params
@@ -56,33 +63,20 @@ class PerformExperiment:
             "ARmedium",
             "ARlarge"
         ]
-        return
 
-    def get_transform(self, train):
+    def get_transform(self, train: bool):
+        """
+        Method returns transform for data.
+
+        :param train - bool
+
+        :return transform objects
+        """
         transforms = []
         transforms.append(T.ToTensor())
         if train:
             transforms.append(T.RandomHorizontalFlip(0.5))
         return T.Compose(transforms)
-
-    def torch_to_pil(self,
-                     img):
-        return transforms.ToPILImage()(img).convert('RGB')
-
-    def _rectangle_intersect(self,
-                             first_box: list,
-                             second_box: list):
-        a = Rectangle(*first_box)
-        b = Rectangle(*second_box)
-        area = a & b
-        if area is None:
-            return area, None
-        else:
-            intersect_area = area.calculate_area()
-            # composite_bbox = a - area
-            composite_bbox = a.difference(area)
-            ratio_1, ratio_2 = intersect_area / a.calculate_area(), intersect_area / b.calculate_area()
-            return (ratio_1, ratio_2), composite_bbox
 
     def ensemble_OD_predictions(self,
                                 bboxes: list,
@@ -104,7 +98,7 @@ class PerformExperiment:
 
         for index_1, first_box in enumerate(bboxes[weak_model_ind]):
             for index_2, second_box in enumerate(bboxes[best_model_ind]):
-                ratio, intersect_coord = self._rectangle_intersect(first_box, second_box)
+                ratio, intersect_coord = rectangle_intersect(first_box, second_box)
                 if ratio is None:
                     check_flag = True
                 elif sum(ratio) > area_threshold:
@@ -136,12 +130,33 @@ class PerformExperiment:
         return {'boxes': np.array(compose_bbox[0]), 'labels': np.array(compose_labels),
                 'scores': np.array(compose_scores)}
 
-    def get_model(self, model_name):
+    def get_model(self, model_name: str):
+        """
+        Method-creator empty model for load_model_weights
+
+        :param model_name - name of model
+        :return model - empty model
+        """
         model_params = self.params[model_name]
         model = get_fasterRCNN_resnet(**model_params)
         return model
+    
+    def load_model_weights(self, list_of_models_name: list):
+        """
+        Method-loader for models. Need some work still.
+
+        :param list_of_models_name - list of models' names 
+        """
+        self.loaded_model_list = []
+        for model_name in list_of_models_name:
+            model = self.get_model(model_name)
+            model.load_state_dict(torch.load(f"/home/hdd/models/{model_name}_1.pth"))
+            #model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
+            model.eval()
+            self.loaded_model_list.append(model)
 
     def _get_dataframes_for_exp_result(self, model_list):
+
         df_dict = dict()
         df_list = []
         for model in model_list:
@@ -149,22 +164,22 @@ class PerformExperiment:
         df_dict.update(df_list)
         return df_dict
 
-    def load_model_weights(self, filepath_list: list):
-        self.loaded_model_list = []
-        for model_name in filepath_list:
-            model = self.get_model(model_name)
+    def fit(self, train_dataset):
+        """
+        Method-starter for fitting of models. One by one it creates and fits all the models in the self.model_list. 
+        After trainings models will be save in files.
 
-            model.load_state_dict(torch.load(f"/home/hdd/models/{model_name}_1.pth"))
-            #model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
-            model.eval()
-            self.loaded_model_list.append(model)
-
-    def fit(self, dataset_test):
+        :param train_dataset - dataset for training
+        """
         for model_name in self.model_list:
             model = self.get_model(model_name)
-            train_model(model, device, dataset, dataset_test, num_epochs=EPOCH_NUMBER, model_name=model_name)
+            train_model(model, device, dataset, train_dataset, num_epochs=EPOCH_NUMBER, model_name=model_name)
 
     def predict(self, dataset_test):
+        """
+        Method for test prediction
+        
+        """
         image_ids = []
         for i in range(len(dataset_test)):
             result_current_image = pd.DataFrame()
