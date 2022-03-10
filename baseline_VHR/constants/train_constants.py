@@ -1,0 +1,2 @@
+BATCH_SIZE_TRAIN: int = 3
+EPOCH_NUMBER: int = 15

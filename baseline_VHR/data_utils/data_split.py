@@ -11,9 +11,9 @@ def train_test_split(dataset_class, validation_flag: bool = False):
         :return list - YOLO coordinates
     
     """
-    dataset = dataset_class('./NWPU VHR-10 dataset', _get_transform(train=False))
-    dataset_test = dataset_class('./NWPU VHR-10 dataset', _get_transform(train=False))
-    dataset_validation = dataset_class('./NWPU VHR-10 dataset', _get_transform(train=False))
+    dataset = dataset_class()
+    dataset_test = dataset_class()
+    dataset_validation = dataset_class()
     # split the dataset in train and test set
     manual_seed(1)
     indices = randperm(len(dataset)).tolist()

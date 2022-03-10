@@ -125,9 +125,20 @@ class xViewDataset(torch.utils.data.Dataset):
 
         list_of_classes.sort()
         print(list_of_classes)
+        print(len(list_of_classes))
         for i in range(len(out_classes)):
             for j in range(len(out_classes[i])):
                 out_classes[i][j] = list_of_classes.index(out_classes[i][j])
         #print(list_of_classes)
-        print(len(list_of_classes))
+        
+        """
+        o1 = []
+        o2 = []
+        o3 = []
+        for i in range(10):
+            o1.append(out_images[i])
+            o2.append(out_boxes[i])
+            o3.append(out_classes[i])
+        return o1, o2, o3
+        """
         return out_images, out_boxes, out_classes

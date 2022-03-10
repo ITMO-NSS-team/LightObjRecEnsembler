@@ -10,6 +10,8 @@ from baseline_VHR.data_loaders.YOLO_dataloader import YOLODataset
 from baseline_VHR.data_loaders.data_constants import METU_TEST, METU_TRAIN, METU_VAL
 from baseline_VHR.data_utils.data_split import train_test_split
 
+from baseline_VHR.constants.train_constants import BATCH_SIZE_TRAIN, EPOCH_NUMBER
+
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 import baseline_VHR.torch_utils.utils as utils
@@ -19,16 +21,17 @@ def train_model(model,
                 device,
                 dataset,
                 dataset_test,
-                num_epochs=1):
+                num_epochs: int = 2, 
+                model_name: str = "1"):
 
     gc.collect()
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=True, num_workers=4,
+        dataset, batch_size=BATCH_SIZE_TRAIN, shuffle=True, num_workers=0,
         collate_fn=utils.collate_fn)
 
     data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=1, shuffle=False, num_workers=4,
+        dataset_test, batch_size=BATCH_SIZE_TRAIN, shuffle=False, num_workers=0,
         collate_fn=utils.collate_fn)
     # model = get_object_detection_model(num_classes)
     # move model to the right device
@@ -52,7 +55,8 @@ def train_model(model,
         lr_scheduler.step()
         # evaluate on the test dataset
         evaluate(model, data_loader_test, device=device)
-    path = "/media/nikita/HDD/models/test1.pth"
-    filepath = "/media/nikita/HDD/models/test1_1.pth"
+    model_name
+    path = f"/home/hdd/models/{model_name}.pth"
+    filepath = f"/home/hdd/models/{model_name}_1.pth"
     torch.save(model, path)
     torch.save(model.state_dict(), filepath)

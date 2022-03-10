@@ -2,7 +2,8 @@ import gc
 import itertools
 import os
 import sys
-sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
+#sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
+sys.path.append ("/home/NAS-object-recognition")
 import pandas as pd
 import numpy as np
 import torch
@@ -14,7 +15,7 @@ from baseline_VHR.train_script import train_model
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 
 # Model's params. IMPORTANT!
-from model_params import *
+from baseline_VHR.constants.model_params import *
 # Datasets' loaders
 from baseline_VHR.data_loaders.xView_dataloader import xViewDataset
 from baseline_VHR.data_loaders.METU_dataloader import METUDataset
@@ -22,6 +23,8 @@ from baseline_VHR.data_loaders.YOLO_dataloader import YOLODataset
 #Datasets' things
 from baseline_VHR.data_loaders.data_constants import METU_TEST, METU_TRAIN, METU_VAL
 from baseline_VHR.data_utils.data_split import train_test_split
+
+from baseline_VHR.constants.train_constants import EPOCH_NUMBER
 
 from baseline_VHR.visualization import plot_img_bbox
 from baseline_VHR.utils.ensemble import Rectangle
@@ -34,7 +37,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 class PerformExperiment:
     def __init__(self,
                  model_list: list,
-                 num_classes: int = 65,
+                 num_classes: int = 62,
                  params: dict = None):
         self.model_list = model_list
         self.num_classes = num_classes
@@ -148,16 +151,18 @@ class PerformExperiment:
 
     def load_model_weights(self, filepath_list: list):
         self.loaded_model_list = []
-        for model_name, filepath in zip(self.model_list, filepath_list):
+        for model_name in filepath_list:
             model = self.get_model(model_name)
-            model.load_state_dict(torch.load(filepath))
+
+            model.load_state_dict(torch.load(f"/home/hdd/models/{model_name}_1.pth"))
+            #model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
             model.eval()
             self.loaded_model_list.append(model)
 
     def fit(self, dataset_test):
         for model_name in self.model_list:
             model = self.get_model(model_name)
-            train_model(model, device, dataset, dataset_test, num_epochs=15)
+            train_model(model, device, dataset, dataset_test, num_epochs=EPOCH_NUMBER, model_name=model_name)
 
     def predict(self, dataset_test):
         image_ids = []
@@ -174,6 +179,7 @@ class PerformExperiment:
                 all_metrics = []
                 tmp_model_list = self.model_list.copy()
                 for model_name, loaded_model in zip(self.model_list, self.loaded_model_list):
+                    loaded_model.to(device)
                     prediction = loaded_model([img.to(device)])[0]
                     ### VISUALISE MODELS PREDICTIONS
                     metrics = visualise_model_prediction(prediction, target, img, image_id, save, show,
@@ -240,7 +246,7 @@ if __name__ == '__main__':
     save = False
     show = True
 
-    num_classes = 62
+    num_classes = NUM_CLASSES
     model_list = ['fasterrcnn_resnet50_fpn',
                   'resnet18',
                   'mobilenet_v3_large',
@@ -256,13 +262,14 @@ if __name__ == '__main__':
                                      num_classes=num_classes,
                                      params=xView_model_dict)
 
-    dataset = xViewDataset()
-    dataset_test = dataset
-    experimenter.fit(dataset_test)
-    # dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
+    dataset = METUDataset(val_flag=METU_TRAIN)
+    #dataset = xViewDataset()
 
+    #dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
+    experimenter.fit(dataset)
+    experimenter.load_model_weights(model_list)
 
     path = os.path.dirname(os.path.abspath(__file__))
     path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'last_prediction_4_models')
-
+    experimenter.predict(dataset)
     gc.collect()

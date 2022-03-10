@@ -51,18 +51,29 @@ class METUDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.imgs)
 
-    def _is_more_than_zero(box: list) -> bool:
+    def _is_more_than_zero(self, box: list) -> bool:
         out = True
         for item in box:
             if item < 0:
                 out = False
         return out
+    
+    def _is_not_degenerate(self, box: list) -> bool:
+        if box[0] > box[2] or box[1] > box[3]:
+            return False
+        return True
 
-    def _search_filename_by_imageID(data, imageID: int) -> str:
+    def _search_filename_by_imageID(self, data, imageID: int) -> str:
         for i in range(len(data['images'])):
             if data['images'][i]['id'] == imageID:
                 return data['images'][i]['file_name']
 
+    def _is_in_bounds(self, box_list, w, h) -> bool:
+        output = True
+        for box in box_list:
+            if not (box[0] >= 0 and box[1] >= 0 and box[2] < w and box[3] < h):
+                output = False
+        return output
 
     def _read_METU(self, images_path: str, json_path: str) -> list:
         """
@@ -73,6 +84,8 @@ class METUDataset(torch.utils.data.Dataset):
 
         :return pair_list - list of data pairs
         """
+        list_of_classes = []
+
         out_images = []
         out_boxes = []
         out_classes = []
@@ -87,6 +100,8 @@ class METUDataset(torch.utils.data.Dataset):
                 object_bb_1 = np.array([int(num) for num in data['annotations'][i]['bbox']])
                 object_bb = np.array(([object_bb_1[0], object_bb_1[1], object_bb_1[0]+object_bb_1[2], object_bb_1[1]+object_bb_1[3]]))
                 class_of_object = data['annotations'][i]['category_id']
+                if not class_of_object in list_of_classes:
+                    list_of_classes.append(class_of_object)
                 if object_bb.shape[0] != 4:
                     print("Issues at %d!" % i)
                     return out_images, out_boxes, out_classes
@@ -94,29 +109,49 @@ class METUDataset(torch.utils.data.Dataset):
                     image = image_id
                     objects = []
                     classes = []
-                    if self._is_more_than_zero(object_bb):
+                    if self._is_more_than_zero(object_bb) and self._is_not_degenerate(object_bb):
                         objects.append(object_bb)
                         classes.append(class_of_object)
                 elif image == image_id:
-                    if self._is_more_than_zero(object_bb):
+                    if self._is_more_than_zero(object_bb) and self._is_not_degenerate(object_bb):
                         objects.append(object_bb)
                         classes.append(class_of_object)
                 elif image != image_id:
                     image_name = self._search_filename_by_imageID(data, image)
                     if (isfile(join(images_path, image_name))):
-                        out_images.append(join(images_path, image_name))
-                        out_boxes.append(objects)
-                        out_classes.append(classes)
+                        img = Image.open(join(images_path, image_name)).convert("RGB")
+                        img_width, img_height = img.size
+                        if self._is_in_bounds(objects, img_width, img_height):
+                            out_images.append(join(images_path, image_name))
+                            out_boxes.append(objects)
+                            out_classes.append(classes)
                     image = image_id
                     objects = []
                     classes = []
-                    if self._is_more_than_zero(object_bb):
+                    if self._is_more_than_zero(object_bb) and self._is_not_degenerate(object_bb):
                         objects.append(object_bb)
                         classes.append(class_of_object)
                     
             image_name = self._search_filename_by_imageID(data, image)
             if (isfile(join(images_path, image_name))):
-                        out_images.append(join(images_path, image_name))
-                        out_boxes.append(objects)
-                        out_classes.append(classes)
+                        img = Image.open(join(images_path, image_name)).convert("RGB")
+                        img_width, img_height = img.size
+                        if self._is_in_bounds(objects, img_width, img_height):
+                            out_images.append(join(images_path, image_name))
+                            out_boxes.append(objects)
+                            out_classes.append(classes)
+        list_of_classes.sort()
+        print(list_of_classes)
+        print(len(list_of_classes))
+        """
+        o1 = []
+        o2 = []
+        o3 = []
+        for i in range(50):
+            o1.append(out_images[i])
+            o2.append(out_boxes[i])
+            o3.append(out_classes[i])
+        return o1, o2, o3
+        """
         return out_images, out_boxes, out_classes
+        
