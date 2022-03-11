@@ -259,7 +259,7 @@ class PerformExperiment:
         return result_df_list
 
 
-    def predict_vithout_visualisation(self, dataset_test):
+    def predict_without_visualisation(self, dataset_test):
         """
         Method for getting predictions results without showing any images
         
@@ -364,5 +364,5 @@ if __name__ == '__main__':
     path = os.path.dirname(os.path.abspath(__file__))
     path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'last_prediction_4_models')
     #experimenter.predict(dataset_val)
-    experimenter.predict_vithout_visualisation(dataset_val)
+    experimenter.predict_without_visualisation(dataset_val)
     gc.collect()
