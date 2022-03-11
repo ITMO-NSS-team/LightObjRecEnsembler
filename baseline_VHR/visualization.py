@@ -1,4 +1,5 @@
 import os
+from unicodedata import name
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -25,6 +26,7 @@ def plot_img_bbox(img, target, image_id: str = None, title: str = None,
 
         im = img.cpu().detach().numpy()
         im = im.transpose((1, 2, 0))
+        #a.add_subplot(1, 2, i)
         a.imshow(im)
         for box in (target['boxes']):
             x, y, width, height = box[0], box[1], box[2] - box[0], box[3] - box[1]

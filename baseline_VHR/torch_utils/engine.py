@@ -15,7 +15,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
-
+    torch.cuda.empty_cache()
     lr_scheduler = None
     if epoch == 0:
         warmup_factor = 1. / 1000
@@ -46,7 +46,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
-
+        torch.cuda.empty_cache()
         if lr_scheduler is not None:
             lr_scheduler.step()
 

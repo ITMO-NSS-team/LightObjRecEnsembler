@@ -1,3 +1,5 @@
 
 BATCH_SIZE_TRAIN: int = 3
-EPOCH_NUMBER: int = 5
+BATCH_SIZE_TEST: int = 1
+
+EPOCH_NUMBER: int = 15

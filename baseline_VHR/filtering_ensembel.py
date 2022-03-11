@@ -20,6 +20,8 @@ def filtering_ensemble(predictions: List, weights: List, image_id: str,
 
     """
     if len(predictions) != len(weights):
+        print(predictions)
+        print(weights)
         raise IndexError("Quantity of models and weights should be the same.")
 
     if threshold_weights is None:

@@ -16,6 +16,7 @@ YOLO_PATH_TO_ANNOTATIONS = ""
 """
 METU CONSTANTS
 """
+"""
 METU_TRAIN = 0
 METU_PATH_TO_TRAIN_IMAGES = "/home/hdd/datasets/METU-ALET/ALET/trainv4"
 METU_PATH_TO_TRAIN_JSON = "/home/hdd/datasets/METU-ALET/ALET/trainv4.json"
@@ -40,4 +41,3 @@ METU_PATH_TO_VAL_JSON = "/media/nikita/HDD/datasets/METU-ALET/ALET/valv4.json"
 METU_TEST = 2
 METU_PATH_TO_TEST_IMAGES = "/media/nikita/HDD/datasets/METU-ALET/ALET/testv4"
 METU_PATH_TO_TEST_JSON = "/media/nikita/HDD/datasets/METU-ALET/ALET/testv4.json"
-"""

@@ -14,6 +14,8 @@ class METUDataset(torch.utils.data.Dataset):
     """
     Class-loader for METU dataset.
     """
+
+    faster_load = True
     classes = []
 
     def __init__(self, val_flag: int = METU_TRAIN):
@@ -160,12 +162,17 @@ class METUDataset(torch.utils.data.Dataset):
                 elif image != image_id:
                     image_name = self._search_filename_by_imageID(data, image)
                     if isfile(join(images_path, image_name)):
-                        img = Image.open(join(images_path, image_name)).convert("RGB")
-                        img_width, img_height = img.size
-                        if self._is_in_bounds(objects, img_width, img_height):
+                        if self.faster_load:
                             out_images.append(join(images_path, image_name))
                             out_boxes.append(objects)
                             out_classes.append(classes)
+                        else:
+                            img = Image.open(join(images_path, image_name)).convert("RGB")
+                            img_width, img_height = img.size
+                            if self._is_in_bounds(objects, img_width, img_height):
+                                out_images.append(join(images_path, image_name))
+                                out_boxes.append(objects)
+                                out_classes.append(classes)
                     image = image_id
                     objects = []
                     classes = []
@@ -175,24 +182,30 @@ class METUDataset(torch.utils.data.Dataset):
                     
             image_name = self._search_filename_by_imageID(data, image)
             if isfile(join(images_path, image_name)):
-                        img = Image.open(join(images_path, image_name)).convert("RGB")
-                        img_width, img_height = img.size
-                        if self._is_in_bounds(objects, img_width, img_height):
+                        if self.faster_load:
                             out_images.append(join(images_path, image_name))
                             out_boxes.append(objects)
                             out_classes.append(classes)
+                        else:
+                            img = Image.open(join(images_path, image_name)).convert("RGB")
+                            img_width, img_height = img.size
+                            if self._is_in_bounds(objects, img_width, img_height):
+                                out_images.append(join(images_path, image_name))
+                                out_boxes.append(objects)
+                                out_classes.append(classes)
         list_of_classes.sort()
         print(list_of_classes)
         print(len(list_of_classes))
-        """
+        
         o1 = []
         o2 = []
         o3 = []
-        for i in range(50):
+        for i in range(300):
             o1.append(out_images[i])
             o2.append(out_boxes[i])
             o3.append(out_classes[i])
         return o1, o2, o3
         """
         return out_images, out_boxes, out_classes
+        """
         

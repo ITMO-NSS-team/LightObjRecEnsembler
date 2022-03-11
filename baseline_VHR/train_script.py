@@ -2,7 +2,7 @@ import gc
 import torch
 import baseline_VHR.torch_utils.utils as utils
 
-from baseline_VHR.constants.train_constants import BATCH_SIZE_TRAIN
+from baseline_VHR.constants.train_constants import BATCH_SIZE_TRAIN, BATCH_SIZE_TEST
 from baseline_VHR.torch_utils.engine import train_one_epoch, evaluate
 from baseline_VHR.faster_RCNN_baseline import get_fasterRCNN_resnet
 
@@ -22,7 +22,7 @@ def train_model(model,
         collate_fn=utils.collate_fn)
 
     data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=BATCH_SIZE_TRAIN, shuffle=False, num_workers=0,
+        dataset_test, batch_size=BATCH_SIZE_TEST, shuffle=False, num_workers=0,
         collate_fn=utils.collate_fn)
     # model = get_object_detection_model(num_classes)
     # move model to the right device
@@ -40,6 +40,7 @@ def train_model(model,
                                                    gamma=0.1)
 
     for epoch in range(num_epochs):
+        torch.cuda.empty_cache()
         # training for one epoch
         train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=1)
         # update the learning rate
