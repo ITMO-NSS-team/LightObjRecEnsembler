@@ -2,8 +2,8 @@ import gc
 import itertools
 import os
 import sys
-sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
-#sys.path.append ("/home/NAS-object-recognition")
+#sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
+sys.path.append ("/nfshome/ypolonskaya/docker_tests/balabanov/NAS-object-recognition")
 import pandas as pd
 import numpy as np
 import torch
@@ -151,8 +151,9 @@ class PerformExperiment:
         self.loaded_model_list = []
         for model_name in list_of_models_name:
             model = self.get_model(model_name)
+            model.load_state_dict(torch.load(f"/nfshome/ypolonskaya/docker_tests/balabanov/models/{model_name}_1.pth"))
             #model.load_state_dict(torch.load(f"/home/hdd/models/{model_name}_1.pth"))
-            model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
+            #model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
             model.eval()
             self.loaded_model_list.append(model)
 
@@ -248,7 +249,7 @@ class PerformExperiment:
 
                 ### SAVE CSV FILES
                 for res, name in zip(result_df_list, tmp_model_list):
-                    res.to_csv(os.path.join(path_prediction, f'{name}.csv'))
+                    res.to_csv(os.path.join(path_prediction, image_id, f'{name}.csv'))
 
                 for name, metric in zip(tmp_model_list, all_metrics):
                     result_current_image[name] = list(metric.values())
@@ -260,7 +261,7 @@ class PerformExperiment:
 
     def predict_vithout_visualisation(self, dataset_test):
         """
-        Method for test prediction
+        Method for getting predictions results without showing any images
         
         """
         image_ids = []
@@ -304,7 +305,6 @@ class PerformExperiment:
                     all_val_weights.append(max(inter_val_weights))
 
                 compose_bbox = all_prediction[0]
-                out_list.append(compose_bbox)
                 plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=True,
                               image_id=image_id, show=False, path=path_prediction)
                 metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
@@ -320,10 +320,9 @@ class PerformExperiment:
                     #tmp_df['image_id'] = image_ids
                     #tmp_df['image_id'] = tmp_df.get('image_id', []) + image_ids
                     result_df_list.append(tmp_df)
-
                 ### SAVE CSV FILES
                 for res, name in zip(result_df_list, tmp_model_list):
-                    res.to_csv(os.path.join(path_prediction, f'{name}.csv'))
+                    res.to_csv(os.path.join(path_prediction, image_id, f'{name}.csv'))
 
                 for name, metric in zip(tmp_model_list, all_metrics):
                     result_current_image[name] = list(metric.values())
@@ -331,7 +330,7 @@ class PerformExperiment:
                 #os.mkdir(os.path.join(path_prediction, f"{image_id}"))
                 result_current_image.to_csv(os.path.join(path_prediction, image_id, f'{image_id}.csv'))
 
-        return out_list
+        return all_prediction
 
 
 if __name__ == '__main__':
@@ -359,7 +358,7 @@ if __name__ == '__main__':
     #dataset = xViewDataset()
 
     #dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
-    #experimenter.fit(dataset, dataset_val)
+    experimenter.fit(dataset, dataset_val)
     experimenter.load_model_weights(model_list)
 
     path = os.path.dirname(os.path.abspath(__file__))

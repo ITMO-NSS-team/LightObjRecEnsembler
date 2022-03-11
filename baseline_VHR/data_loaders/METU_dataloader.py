@@ -194,13 +194,13 @@ class METUDataset(torch.utils.data.Dataset):
                                 out_boxes.append(objects)
                                 out_classes.append(classes)
         list_of_classes.sort()
-        print(list_of_classes)
-        print(len(list_of_classes))
+        print(f"Number of classes: {len(list_of_classes)}")
+        print(f"List of classes: {list_of_classes}")
         
         o1 = []
         o2 = []
         o3 = []
-        for i in range(300):
+        for i in range(1000):
             o1.append(out_images[i])
             o2.append(out_boxes[i])
             o3.append(out_classes[i])

@@ -48,7 +48,7 @@ def train_model(model,
         # evaluate on the test dataset
         evaluate(model, data_loader_test, device=device)
     model_name
-    path = f"/home/hdd/models/{model_name}.pth"
-    filepath = f"/home/hdd/models/{model_name}_1.pth"
+    path = f"/nfshome/ypolonskaya/docker_tests/balabanov/models/{model_name}.pth"
+    filepath = f"/nfshome/ypolonskaya/docker_tests/balabanov/models/{model_name}_1.pth"
     torch.save(model, path)
     torch.save(model.state_dict(), filepath)
