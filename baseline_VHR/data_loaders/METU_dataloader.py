@@ -15,7 +15,7 @@ class METUDataset(torch.utils.data.Dataset):
     Class-loader for METU dataset.
     """
 
-    faster_load = True
+    faster_load = False
     classes = []
 
     def __init__(self, val_flag: int = METU_TRAIN):
@@ -196,7 +196,7 @@ class METUDataset(torch.utils.data.Dataset):
         list_of_classes.sort()
         print(f"Number of classes: {len(list_of_classes)}")
         print(f"List of classes: {list_of_classes}")
-        
+        """
         o1 = []
         o2 = []
         o3 = []
@@ -207,5 +207,5 @@ class METUDataset(torch.utils.data.Dataset):
         return o1, o2, o3
         """
         return out_images, out_boxes, out_classes
-        """
+        
         

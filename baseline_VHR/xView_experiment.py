@@ -1,9 +1,10 @@
 import gc
 import itertools
+import json
 import os
 import sys
-#sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
-sys.path.append ("/nfshome/ypolonskaya/docker_tests/balabanov/NAS-object-recognition")
+sys.path.append ("/home/nikita/Desktop/NAS-object-recognition")
+#sys.path.append ("/nfshome/ypolonskaya/docker_tests/balabanov/NAS-object-recognition")
 import pandas as pd
 import numpy as np
 import torch
@@ -27,7 +28,7 @@ from baseline_VHR.data_utils.data_split import train_test_split
 
 from baseline_VHR.constants.train_constants import EPOCH_NUMBER
 
-from baseline_VHR.visualization import plot_img_bbox
+from baseline_VHR.visualization import plot_img_bbox, plot_img_bbox_all
 from baseline_VHR.utils.utils import torch_to_pil
 from baseline_VHR.utils.bounding_boxes_utils import rectangle_intersect
 from baseline_VHR.filtering_ensembel import filtering_ensemble
@@ -35,7 +36,9 @@ from baseline_VHR.validation_weights import validation_weights, calculate_coco_m
 from baseline_VHR.utils.utils import visualise_model_prediction, visualise_model_prediction_nms, get_model_metrics, get_model_metrics_nms
 
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+#device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device =  torch.device('cpu')
+
 
 class PerformExperiment:
     """
@@ -64,6 +67,7 @@ class PerformExperiment:
             "ARmedium",
             "ARlarge"
         ]
+        self.classes = []
 
     def get_transform(self, train: bool):
         """
@@ -110,11 +114,12 @@ class PerformExperiment:
                         chosen_label = labels[best_model_ind][index_2]
                         chosen_score = scores[best_model_ind][index_2]
                     else:
-                        best_CW_ind = np.argmax([CW1, CW2])
+                        best_CW_ind = int(np.argmax([CW1, CW2]))
                         chosen_box = first_box if best_CW_ind == 0 else second_box
                         chosen_ind = index_1 if best_CW_ind == 0 else index_2
-                        chosen_label = labels[best_CW_ind][chosen_ind]
-                        chosen_score = scores[best_CW_ind][chosen_ind]
+                        if chosen_ind < len(labels[best_CW_ind]) and best_CW_ind< len(labels):
+                            chosen_label = labels[best_CW_ind][chosen_ind]
+                            chosen_score = scores[best_CW_ind][chosen_ind]
 
                     check_flag = False
                     break
@@ -151,9 +156,9 @@ class PerformExperiment:
         self.loaded_model_list = []
         for model_name in list_of_models_name:
             model = self.get_model(model_name)
-            model.load_state_dict(torch.load(f"/nfshome/ypolonskaya/docker_tests/balabanov/models/{model_name}_1.pth"))
+            #model.load_state_dict(torch.load(f"/nfshome/ypolonskaya/docker_tests/balabanov/models/{model_name}_1.pth"))
             #model.load_state_dict(torch.load(f"/home/hdd/models/{model_name}_1.pth"))
-            #model.load_state_dict(torch.load(f"/media/nikita/HDD/models/{model_name}_1.pth"))
+            model.load_state_dict(torch.load(f"/media/nikita/HDD1/models/{model_name}_1.pth"))
             model.eval()
             self.loaded_model_list.append(model)
 
@@ -177,18 +182,28 @@ class PerformExperiment:
             model = self.get_model(model_name)
             train_model(model, device, train_dataset, dataset_val, num_epochs=EPOCH_NUMBER, model_name=model_name)
 
+    def read_classes(self) -> None:
+        json_path = "/home/nikita/Desktop/NAS-object-recognition/baseline_VHR/classes.json"
+        with open(json_path) as f:
+            data = json.load(f)
+        for i in tqdm(range(len(data['categories']))):
+            if data['categories'][i]['id'] != []:
+                self.classes.append(data['categories'][i]['name'])
+
     def predict(self, dataset_test):
         """
         Method for test prediction
         
         """
+        show = False
+        save = True
         image_ids = []
         for i in tqdm(range(len(dataset_test))):
             result_current_image = pd.DataFrame()
             img, target = dataset_test[i]
             image_id = str(target['image_id'].tolist()[0] + 1)
             image_ids.append(image_id)
-            plot_img_bbox(img, target, title='IMAGE', save=save,
+            plot_img_bbox(img, target, device, self.classes, title='IMAGE', save=save,
                           image_id=image_id, show=show, path=path_prediction)
             with torch.no_grad():
                 all_prediction = []
@@ -202,12 +217,13 @@ class PerformExperiment:
                                                          path_prediction, model_name)
 
                     ### VISUALISE MODELS PREDICTIONS AFTER IOU_THERESHOLD
+
                     nms_prediction, metrics_nms = visualise_model_prediction_nms(prediction, target,
                                                                                  img, image_id, save,
                                                                                  show, path_prediction,
                                                                                  f"{model_name}_NMS")
-
-                    all_prediction.append(nms_prediction)
+                    
+                    all_prediction.append(prediction)
                     all_metrics.append(metrics)
                     tmp_model_list.append(f"{model_name}_NMS")
                     all_metrics.append(metrics_nms)
@@ -262,11 +278,10 @@ class PerformExperiment:
     def predict_without_visualisation(self, dataset_test):
         """
         Method for getting predictions results without showing any images
-        
+        DOESN'T WORK WITH CUDA!!
         """
         image_ids = []
-        out_list = []
-
+        out_list_of_metrics_ensamble = []
         for i in tqdm(range(len(dataset_test))):
             result_current_image = pd.DataFrame()
             img, target = dataset_test[i]
@@ -274,19 +289,31 @@ class PerformExperiment:
             image_ids.append(image_id)
             with torch.no_grad():
                 all_prediction = []
+                all_prediction_NMS = []
+                all_pred_for_show = []
                 all_metrics = []
-                tmp_model_list = self.model_list.copy()
+                tmp_model_list = ['fasterrcnn_resnet50_fpn', 'fasterrcnn_resnet50_fpn_NMS','resnet18', 'resnet18_NMS',
+                                                                                'mobilenet_v3_large','mobilenet_v3_large_NMS','densenet121', 
+                                                                                'densenet121_NMS', "ensamble"]
+                all_pred_for_show.append(target)
                 for model_name, loaded_model in zip(self.model_list, self.loaded_model_list):
                     loaded_model.to(device)
                     prediction = loaded_model([img.to(device)])[0]
+                    all_prediction.append(prediction)
                     metrics = get_model_metrics(prediction, target)
+                    plot_img_bbox(img, prediction, device, self.classes, title=model_name, save=True,
+                              image_id=image_id, show=False, path=path_prediction)
 
-                    nms_prediction, metrics_nms = get_model_metrics_nms(prediction, target)
-
-                    all_prediction.append(nms_prediction)
+                    nms_prediction, metrics_nms = visualise_model_prediction_nms(prediction, target)
+                    plot_img_bbox(img, nms_prediction, device, self.classes, title=f"{model_name}_NMS", save=True,
+                              image_id=image_id, show=False, path=path_prediction)
                     all_metrics.append(metrics)
-                    tmp_model_list.append(f"{model_name}_NMS")
                     all_metrics.append(metrics_nms)
+                    #all_prediction.append(nms_prediction)
+
+                    all_prediction_NMS.append(nms_prediction)
+                    all_pred_for_show.append(prediction)
+                    all_pred_for_show.append(nms_prediction)
 
                 all_prediction = filtering_ensemble(all_prediction, val_weights, image_id)
                 all_val_weights = val_weights.copy()
@@ -301,19 +328,31 @@ class PerformExperiment:
                                                                 [nms_pred['labels'], nms_pred_2['labels']],
                                                                 [nms_pred['scores'], nms_pred_2['scores']],
                                                                 weights=inter_val_weights)
-                    all_prediction.append(compose_bbox)
+                    all_prediction.append(compose_bbox)                                            
                     all_val_weights.append(max(inter_val_weights))
+                    all_pred_for_show.append(compose_bbox)
 
-                compose_bbox = all_prediction[0]
-                plot_img_bbox(img, compose_bbox, title='ENSEMBLE', save=True,
-                              image_id=image_id, show=False, path=path_prediction)
+                compose_bbox = {"boxes":torch.Tensor(all_prediction[0]["boxes"]), 
+                'labels': torch.Tensor(all_prediction[0]["labels"]), 'scores': torch.Tensor(all_prediction[0]["scores"])}
+
+                #all_pred_for_show.append(compose_bbox)
+                nms_prediction, metrics_nms = visualise_model_prediction_nms(compose_bbox, target)
+                all_prediction.append(nms_prediction)
+                plot_img_bbox(img, nms_prediction, device, self.classes, title='ENSEMBLE', save=True,
+                            image_id=image_id, show=False, path=path_prediction)
+
+                
                 metrics_ensemble_nms = calculate_coco_metrics(target, compose_bbox)
+                out_list_of_metrics_ensamble.append(metrics_ensemble_nms)
                 all_metrics.append(metrics_ensemble_nms)
-                tmp_model_list.append('ensemble')
                 ### SAVE METRICS FOR CURRENT IMAGE
 
                 df_dict = self._get_dataframes_for_exp_result(tmp_model_list)
                 result_df_list = []
+
+                plot_img_bbox_all(img, all_pred_for_show, device, self.classes, save=True,
+                            image_id=image_id, show=False, path=path_prediction)
+
 
                 for model_name, metrics in zip(tmp_model_list, all_metrics):
                     tmp_df = df_dict[model_name].append(metrics, ignore_index=True)
@@ -321,14 +360,22 @@ class PerformExperiment:
                     #tmp_df['image_id'] = tmp_df.get('image_id', []) + image_ids
                     result_df_list.append(tmp_df)
                 ### SAVE CSV FILES
+
                 for res, name in zip(result_df_list, tmp_model_list):
                     res.to_csv(os.path.join(path_prediction, image_id, f'{name}.csv'))
+                    res.to_csv(os.path.join(path_prediction, f'{name}.csv'),  mode='a', header=not os.path.exists(os.path.join(path_prediction, f'{name}.csv')))
+                    #with open(os.path.join(path_prediction, f'{name}.csv'),'a') as fd:
+                        #fd.write(res)
 
                 for name, metric in zip(tmp_model_list, all_metrics):
                     result_current_image[name] = list(metric.values())
                 result_current_image.index = self.columns
                 #os.mkdir(os.path.join(path_prediction, f"{image_id}"))
                 result_current_image.to_csv(os.path.join(path_prediction, image_id, f'{image_id}.csv'))
+                result_current_image.to_csv(os.path.join(path_prediction, 'all_image.csv'), mode='a', header=not os.path.exists(os.path.join(path_prediction, 'all_image.csv')))
+
+                #with open(os.path.join(path_prediction, f'all.csv'),'a') as fd:
+                        #fd.write(result_current_image)
 
         return all_prediction
 
@@ -347,22 +394,27 @@ if __name__ == '__main__':
                      "../local/VHR_statedict_resnet18.pth",
                      "../local/VHR_statedict_mobilenet_v3_large.pth",
                      "../local/VHR_statedict_densenet121.pth"]
-    val_weights = [0.5279900411868104, 0.04605057596583206, 0.11095235215754355, 0.31500703068981406]
+    #val_weights = [0.5279900411868104, 0.04605057596583206, 0.11095235215754355, 0.31500703068981406]
+    val_weights = [0.5, 0.2, 0.3, 0.4]
 
     experimenter = PerformExperiment(model_list=model_list,
                                      num_classes=num_classes,
                                      params=xView_model_dict)
 
-    dataset = METUDataset(val_flag=METU_TRAIN)
+    #dataset = METUDataset(val_flag=METU_TRAIN)
     dataset_val = METUDataset(val_flag=METU_VAL)
     #dataset = xViewDataset()
 
     #dataset, dataset_test, dataset_val = train_test_split(xViewDataset, validation_flag=True)
-    experimenter.fit(dataset, dataset_val)
+    #experimenter.fit(dataset, dataset_val)
     experimenter.load_model_weights(model_list)
 
     path = os.path.dirname(os.path.abspath(__file__))
-    path_prediction = os.path.join(path, 'NWPU VHR-10 dataset', 'last_prediction_4_models')
+    path_prediction = os.path.join(path, 'last_prediction_4_models')
+    experimenter.read_classes()
+    print(experimenter.classes)
     #experimenter.predict(dataset_val)
     experimenter.predict_without_visualisation(dataset_val)
     gc.collect()
+
+
